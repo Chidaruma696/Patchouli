@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -210,6 +211,7 @@ fun KitSurface(
 	screentone: KitScreentone = KitScreentone.None,
 	screentoneBoost: Float = 1f,
 	onClick: (() -> Unit)? = null,
+	onLongClick: (() -> Unit)? = null,
 	@Suppress("UNUSED_PARAMETER") tilt: Float = 0f,
 	topEdgeOnly: Boolean = false,
 	borderColor: Color = Color.Unspecified,
@@ -240,7 +242,11 @@ fun KitSurface(
 			.background(fill)
 			.then(toneModifier)
 			.border(personality.shape.border, line, shape)
-			.then(if (onClick != null) Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick) else Modifier)
+			.then(
+				if (onClick != null || onLongClick != null) {
+					Modifier.combinedClickable(interactionSource = interaction, indication = null, onLongClick = onLongClick, onClick = onClick ?: {})
+				} else Modifier,
+			)
 			.padding(contentPadding),
 	) {
 		CompositionLocalProvider(LocalContentColor provides contentInk) { content() }

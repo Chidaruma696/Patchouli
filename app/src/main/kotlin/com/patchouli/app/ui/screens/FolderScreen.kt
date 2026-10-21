@@ -68,6 +68,7 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 	val subfolders = remember(folder) { folder.sortedFolders() }
 	val videos = remember(folder) { folder.sortedVideos() }
 	var menu by remember { mutableStateOf(false) }
+	var menuFor by remember { mutableStateOf<Folder?>(null) }
 	val title = anime?.title ?: Names.series(folder.name)
 
 	KitScaffold(
@@ -86,14 +87,14 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 			verticalArrangement = Arrangement.spacedBy(10.dp),
 		) {
 			if (anime != null) {
-				item { AnimeHeader(anime = anime, watched = videos.count { Progress[it.path]?.finished == true }) }
+				item { AnimeHeader(anime = anime, cover = Metadata.cover(folder), watched = videos.count { Progress[it.path]?.finished == true }) }
 			}
 			if (subfolders.isNotEmpty()) {
 				item { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
 				item { CoversBanner(subfolders) }
 				items(subfolders.chunked(2)) { row ->
 					Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-						row.forEach { sub -> Box(Modifier.weight(1f)) { FolderCard(sub, onClick = { onOpenFolder(sub) }) } }
+						row.forEach { sub -> Box(Modifier.weight(1f)) { FolderCard(sub, onClick = { onOpenFolder(sub) }, onLongClick = { menuFor = sub }) } }
 						if (row.size == 1) Spacer(Modifier.weight(1f))
 					}
 				}
@@ -111,35 +112,19 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 		}
 	}
 
-	if (menu) {
-		KitSheet(onDismiss = { menu = false }, title = title) {
-			val notSeries = lookup?.manual == true
-			KitListContainer {
-				KitListRow(
-					title = stringResource(if (notSeries) R.string.is_a_series else R.string.not_a_series),
-					subtitle = if (notSeries) null else stringResource(R.string.not_a_series_summary),
-					onClick = { Metadata.setNotSeries(folder, !notSeries); menu = false },
-				)
-			}
-			if (lookup != null && lookup.anime == null && !notSeries) {
-				KitText(stringResource(R.string.no_match) + " · " + lookup.query, role = KitTextRole.Body, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp), uppercase = false)
-			}
-			Metadata.errors[folder.path]?.let { err ->
-				KitText(err, role = KitTextRole.Mono, color = colors.error, modifier = Modifier.padding(top = 10.dp))
-			}
-		}
-	}
+	if (menu) FolderMenu(folder, onDismiss = { menu = false })
+	menuFor?.let { sub -> FolderMenu(sub, onDismiss = { menuFor = null }) }
 }
 
 @Composable
-private fun AnimeHeader(anime: com.patchouli.app.catalog.Anime, watched: Int) {
+private fun AnimeHeader(anime: com.patchouli.app.catalog.Anime, cover: Any?, watched: Int) {
 	val colors = LocalPersonality.current.colors
 	var expanded by remember { mutableStateOf(false) }
 	KitSurface(contentPadding = PaddingValues(12.dp)) {
 		Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 			Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
 				AsyncImage(
-					model = anime.cover, contentDescription = null, contentScale = ContentScale.Crop,
+					model = cover ?: anime.cover, contentDescription = null, contentScale = ContentScale.Crop,
 					modifier = Modifier.width(96.dp).aspectRatio(2f / 3f).clip(kitShape(8.dp)).background(colors.surfaceVariant),
 				)
 				Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {

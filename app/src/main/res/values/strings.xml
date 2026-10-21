@@ -22,6 +22,13 @@
 	<string name="watched">Watched</string>
 	<string name="resume_at">Resume at %1$s</string>
 	<string name="no_match">No match found</string>
+	<string name="cover_other">Look for another cover</string>
+	<string name="cover_other_summary">Other matches from the catalogue, or a different search</string>
+	<string name="cover_custom">Cover from this phone</string>
+	<string name="cover_custom_summary">Pick an image; it is copied into the app</string>
+	<string name="cover_custom_remove">Remove the custom cover</string>
+	<string name="search">Search</string>
+	<string name="cover_results_empty">Nothing found for that</string>
 	<string name="cover_searching">Looking for the cover…</string>
 	<string name="cover_none">No cover</string>
 	<string name="cover_failed">Catalogue unreachable</string>

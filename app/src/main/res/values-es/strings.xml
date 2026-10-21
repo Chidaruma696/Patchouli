@@ -21,6 +21,13 @@
 	<string name="watched">Visto</string>
 	<string name="resume_at">Seguir en %1$s</string>
 	<string name="no_match">Sin coincidencia</string>
+	<string name="cover_other">Buscar otra carátula</string>
+	<string name="cover_other_summary">Otras coincidencias del catálogo, o una búsqueda distinta</string>
+	<string name="cover_custom">Carátula desde el teléfono</string>
+	<string name="cover_custom_summary">Elige una imagen; se copia dentro de la app</string>
+	<string name="cover_custom_remove">Quitar la carátula personalizada</string>
+	<string name="search">Buscar</string>
+	<string name="cover_results_empty">No hay nada con ese nombre</string>
 	<string name="cover_searching">Buscando la carátula…</string>
 	<string name="cover_none">Sin carátula</string>
 	<string name="cover_failed">Catálogo sin respuesta</string>

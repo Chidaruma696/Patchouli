@@ -19,7 +19,14 @@ import java.security.MessageDigest
 
 /** What we asked AniList about a folder and what it said; [manual] when the user answered instead. */
 @Serializable
-data class Lookup(val query: String, val anime: Anime? = null, val at: Long, val manual: Boolean = false)
+data class Lookup(
+	val query: String,
+	val anime: Anime? = null,
+	val at: Long,
+	val manual: Boolean = false,
+	/** An image the user picked from the phone, copied into the app's files; wins over [anime]'s cover. */
+	val customCover: String? = null,
+)
 
 /**
  * Covers and summaries for the folders, one AniList search per folder name, cached on disk so a
@@ -88,10 +95,13 @@ object Metadata {
 		return lookup?.anime
 	}
 
+	/** The image to show for a folder: the one the user picked, else the catalogue's. */
+	fun cover(folder: Folder): Any? = cache[folder.path]?.let { it.customCover?.let { p -> File(p) } ?: it.anime?.cover }
+
 	fun ensure(folder: Folder) {
 		if (!AppPrefs.coversOnline) return
 		val current = cache[folder.path]
-		if (current != null && (current.anime != null || current.manual || System.currentTimeMillis() - current.at < RETRY_AFTER_MS)) return
+		if (current != null && (current.anime != null || current.manual || current.customCover != null || System.currentTimeMillis() - current.at < RETRY_AFTER_MS)) return
 		if (folder.name.lowercase() in skipNames || folder.total == 0) return
 		synchronized(inflight) {
 			// a failed lookup (no network, a 403) waits a minute before trying again
@@ -144,6 +154,45 @@ object Metadata {
 		val query = Names.series(folder.name)
 		if (notSeries) store(folder.path, Lookup(query, null, System.currentTimeMillis(), manual = true))
 		else { cache.remove(folder.path); fileFor(folder.path).delete(); ensure(folder) }
+	}
+
+	/** Every candidate the catalogues have for a query, from the first one that answers. */
+	suspend fun candidates(query: String): List<Anime> {
+		for ((name, search) in listOf<Pair<String, suspend (String) -> List<Anime>>>("anilist" to { AniList.search(it, 10) }, "jikan" to { Jikan.search(it, 10) }, "kitsu" to { Kitsu.search(it, 10) })) {
+			synchronized(down) { down[name]?.let { if (System.currentTimeMillis() - it < DOWN_FOR_MS) return@synchronized null else down.remove(name) } } ?: continue
+			try {
+				val found = search(query)
+				if (found.isNotEmpty()) return found
+			} catch (e: Exception) {
+				Log.w(TAG, "$name failed for '$query': ${e.message}")
+				synchronized(down) { down[name] = System.currentTimeMillis() }
+			}
+		}
+		return emptyList()
+	}
+
+	/** The user picked one of the candidates. */
+	fun choose(folder: Folder, anime: Anime) {
+		val current = cache[folder.path]
+		store(folder.path, Lookup(current?.query ?: Names.series(folder.name), anime, System.currentTimeMillis(), customCover = current?.customCover))
+	}
+
+	/** The user picked an image from the phone: copied into our files so the original can go. */
+	fun setCustomCover(folder: Folder, context: Context, uri: android.net.Uri): Boolean {
+		val target = File(File(context.filesDir, "covers").also { it.mkdirs() }, fileFor(folder.path).nameWithoutExtension + ".jpg")
+		val ok = runCatching {
+			context.contentResolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it) } } ?: error("no stream")
+		}.isSuccess
+		if (!ok) return false
+		val current = cache[folder.path]
+		store(folder.path, Lookup(current?.query ?: Names.series(folder.name), current?.anime, System.currentTimeMillis(), manual = current?.manual == true, customCover = target.absolutePath))
+		return true
+	}
+
+	fun clearCustomCover(folder: Folder) {
+		val current = cache[folder.path] ?: return
+		current.customCover?.let { File(it).delete() }
+		store(folder.path, current.copy(customCover = null))
 	}
 
 	@Serializable

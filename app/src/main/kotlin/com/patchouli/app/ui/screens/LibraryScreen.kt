@@ -22,6 +22,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +71,8 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 	val colors = LocalPersonality.current.colors
 	val shelves = Library.shelves
 	val continuing = Progress.continueWatching()
+	var menuFor by remember { mutableStateOf<Folder?>(null) }
+	menuFor?.let { FolderMenu(it, onDismiss = { menuFor = null }) }
 	if (Library.loading && Library.root == null) {
 		Box(Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
 			Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -115,7 +121,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 			if (shelves.isNotEmpty()) {
 				item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
 				item(span = { GridItemSpan(2) }) { CoversBanner(shelves) }
-				items(shelves, key = { it.path }) { folder -> FolderCard(folder, onClick = { onOpenFolder(folder) }) }
+				items(shelves, key = { it.path }) { folder -> FolderCard(folder, onClick = { onOpenFolder(folder) }, onLongClick = { menuFor = folder }) }
 			}
 			// videos lying directly in the root folder, outside any shelf
 			if (loose.isNotEmpty()) {
@@ -155,14 +161,14 @@ fun CoversBanner(folders: List<Folder>) {
 
 /** A folder as a book on the shelf: cover from AniList, or a frame of its first video with a word on why. */
 @Composable
-fun FolderCard(folder: Folder, onClick: () -> Unit) {
+fun FolderCard(folder: Folder, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
 	val colors = LocalPersonality.current.colors
 	val anime = Metadata.rememberAnime(folder)
 	val status = Metadata.status(folder)
-	KitSurface(onClick = onClick, elevation = KitSurfaceElevation.Card) {
+	KitSurface(onClick = onClick, onLongClick = onLongClick, elevation = KitSurfaceElevation.Card) {
 		Column {
 			Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(colors.surfaceVariant)) {
-				val model: Any? = anime?.cover ?: folder.firstVideo?.let { File(it.path) }
+				val model: Any? = Metadata.cover(folder) ?: folder.firstVideo?.let { File(it.path) }
 				if (model != null) {
 					AsyncImage(model = model, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
 				} else {
