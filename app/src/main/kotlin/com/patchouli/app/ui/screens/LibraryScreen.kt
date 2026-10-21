@@ -45,6 +45,9 @@ import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
 import com.patchouli.app.library.Video
 import com.patchouli.app.ui.AppPrefs
+import com.patchouli.app.ui.kit.KitButton
+import com.patchouli.app.ui.kit.KitButtonSize
+import com.patchouli.app.ui.kit.KitButtonVariant
 import com.patchouli.app.ui.kit.KitCircularProgress
 import com.patchouli.app.ui.kit.KitLinearProgress
 import com.patchouli.app.ui.kit.KitListContainer
@@ -111,6 +114,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 		} else {
 			if (shelves.isNotEmpty()) {
 				item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
+				item(span = { GridItemSpan(2) }) { CoversBanner(shelves) }
 				items(shelves, key = { it.path }) { folder -> FolderCard(folder, onClick = { onOpenFolder(folder) }) }
 			}
 			// videos lying directly in the root folder, outside any shelf
@@ -126,11 +130,35 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 	}
 }
 
-/** A folder as a book on the shelf: cover from AniList, or a frame of its first video. */
+/** The strip above the shelves while covers are being looked up, with a way out of the feature. */
+@Composable
+fun CoversBanner(folders: List<Folder>) {
+	val colors = LocalPersonality.current.colors
+	val statuses = folders.map { Metadata.status(it) }
+	val failed = statuses.any { it == Metadata.Status.Failed }
+	val pending = statuses.any { it == Metadata.Status.Pending }
+	if (!failed && !pending) return
+	KitSurface(modifier = Modifier.fillMaxWidth(), elevation = KitSurfaceElevation.Flat, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
+		Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+			if (failed) Icon(ImageVector.vectorResource(R.drawable.ic_refresh), contentDescription = null, tint = colors.error, modifier = Modifier.size(18.dp))
+			else KitCircularProgress(modifier = Modifier.size(18.dp))
+			KitText(
+				text = stringResource(if (failed) R.string.covers_banner_failed else R.string.covers_banner_searching),
+				role = KitTextRole.Body, color = colors.onSurfaceVariant, fontSize = 12.sp, uppercase = false,
+				modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
+			)
+			if (failed) KitButton(onClick = { Metadata.retry(folders) }, label = stringResource(R.string.covers_retry), size = KitButtonSize.Sm, variant = KitButtonVariant.Tonal)
+			KitButton(onClick = { AppPrefs.updateCoversOnline(false) }, label = stringResource(R.string.covers_skip), size = KitButtonSize.Sm, variant = KitButtonVariant.Text)
+		}
+	}
+}
+
+/** A folder as a book on the shelf: cover from AniList, or a frame of its first video with a word on why. */
 @Composable
 fun FolderCard(folder: Folder, onClick: () -> Unit) {
 	val colors = LocalPersonality.current.colors
 	val anime = Metadata.rememberAnime(folder)
+	val status = Metadata.status(folder)
 	KitSurface(onClick = onClick, elevation = KitSurfaceElevation.Card) {
 		Column {
 			Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(colors.surfaceVariant)) {
@@ -139,6 +167,22 @@ fun FolderCard(folder: Folder, onClick: () -> Unit) {
 					AsyncImage(model = model, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
 				} else {
 					Icon(ImageVector.vectorResource(R.drawable.ic_folder), contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(40.dp).align(Alignment.Center))
+				}
+				val note = when (status) {
+					Metadata.Status.Pending -> R.string.cover_searching
+					Metadata.Status.Failed -> R.string.cover_failed
+					Metadata.Status.None -> R.string.cover_none
+					else -> null
+				}
+				if (note != null) {
+					Row(
+						modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).clip(kitShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 7.dp, vertical = 4.dp),
+						verticalAlignment = Alignment.CenterVertically,
+						horizontalArrangement = Arrangement.spacedBy(5.dp),
+					) {
+						if (status == Metadata.Status.Pending) KitCircularProgress(modifier = Modifier.size(10.dp), color = Color.White)
+						KitText(stringResource(note), role = KitTextRole.Label, color = Color.White, fontSize = 10.sp, maxLines = 1, uppercase = false)
+					}
 				}
 			}
 			Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {

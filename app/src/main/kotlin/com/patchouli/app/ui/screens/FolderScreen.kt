@@ -90,6 +90,7 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 			}
 			if (subfolders.isNotEmpty()) {
 				item { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
+				item { CoversBanner(subfolders) }
 				items(subfolders.chunked(2)) { row ->
 					Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
 						row.forEach { sub -> Box(Modifier.weight(1f)) { FolderCard(sub, onClick = { onOpenFolder(sub) }) } }

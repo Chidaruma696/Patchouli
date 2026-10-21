@@ -22,6 +22,13 @@
 	<string name="watched">Watched</string>
 	<string name="resume_at">Resume at %1$s</string>
 	<string name="no_match">No match found</string>
+	<string name="cover_searching">Looking for the cover…</string>
+	<string name="cover_none">No cover</string>
+	<string name="cover_failed">Catalogue unreachable</string>
+	<string name="covers_banner_searching">Looking up covers and summaries on AniList</string>
+	<string name="covers_banner_failed">The catalogue is not answering right now; it is retried on its own</string>
+	<string name="covers_skip">Skip</string>
+	<string name="covers_retry">Retry</string>
 	<string name="not_a_series">Not a series</string>
 	<string name="not_a_series_summary">Do not ask AniList about this folder</string>
 	<string name="is_a_series">Look it up on AniList</string>

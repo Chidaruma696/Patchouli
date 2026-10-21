@@ -56,6 +56,29 @@ object Metadata {
 
 	operator fun get(folder: Folder): Lookup? = cache[folder.path]
 
+	/** Where a folder's cover stands, for the cards to say so instead of showing a frame in silence. */
+	enum class Status { Off, Found, None, Skipped, Pending, Failed }
+
+	fun status(folder: Folder): Status {
+		if (!AppPrefs.coversOnline) return Status.Off
+		val lookup = cache[folder.path]
+		return when {
+			lookup?.anime != null -> Status.Found
+			lookup?.manual == true -> Status.Skipped
+			lookup != null -> Status.None
+			errors.containsKey(folder.path) -> Status.Failed
+			folder.name.lowercase() in skipNames || folder.total == 0 -> Status.Skipped
+			else -> Status.Pending
+		}
+	}
+
+	/** Forgets the failures and asks again for every folder given. */
+	fun retry(folders: List<Folder>) {
+		synchronized(inflight) { failures.clear() }
+		errors.clear()
+		folders.forEach { ensure(it) }
+	}
+
 	/** The entry for a folder, asking AniList the first time it is shown. */
 	@Composable
 	fun rememberAnime(folder: Folder): Anime? {

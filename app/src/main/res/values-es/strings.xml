@@ -21,6 +21,13 @@
 	<string name="watched">Visto</string>
 	<string name="resume_at">Seguir en %1$s</string>
 	<string name="no_match">Sin coincidencia</string>
+	<string name="cover_searching">Buscando la carátula…</string>
+	<string name="cover_none">Sin carátula</string>
+	<string name="cover_failed">Catálogo sin respuesta</string>
+	<string name="covers_banner_searching">Buscando carátulas y sinopsis en AniList</string>
+	<string name="covers_banner_failed">El catálogo no responde ahora mismo; se reintenta solo</string>
+	<string name="covers_skip">Omitir</string>
+	<string name="covers_retry">Reintentar</string>
 	<string name="not_a_series">No es una serie</string>
 	<string name="not_a_series_summary">No preguntar a AniList por esta carpeta</string>
 	<string name="is_a_series">Buscarla en AniList</string>
