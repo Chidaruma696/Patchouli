@@ -55,8 +55,13 @@ fun FolderMenu(folder: Folder, onDismiss: () -> Unit) {
 	var results by remember { mutableStateOf<List<Anime>?>(null) }
 	var busy by remember { mutableStateOf(false) }
 	var web by remember { mutableStateOf(false) }
+	var organize by remember { mutableStateOf(false) }
 	if (web) {
 		WebCoverPicker(folder, initialQuery = "$query anime cover", onDismiss = { web = false }, onPicked = { web = false; onDismiss() })
+		return
+	}
+	if (organize) {
+		OrganizeSheet(folder, onDismiss = { organize = false; onDismiss() })
 		return
 	}
 	val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -99,6 +104,12 @@ fun FolderMenu(folder: Folder, onDismiss: () -> Unit) {
 					title = stringResource(if (notSeries) R.string.is_a_series else R.string.not_a_series),
 					subtitle = if (notSeries) null else stringResource(R.string.not_a_series_summary),
 					onClick = { Metadata.setNotSeries(folder, !notSeries); onDismiss() },
+					showDivider = true,
+				)
+				KitListRow(
+					title = stringResource(R.string.organize),
+					subtitle = stringResource(R.string.organize_summary),
+					onClick = { organize = true },
 				)
 			}
 			if (lookup != null && lookup.anime == null && !notSeries) {

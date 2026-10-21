@@ -113,6 +113,24 @@
 	<string name="empty_root_hint">Todavía no hay nada en %1$s. Pon vídeos ahí, o elige otra carpeta en Ajustes.</string>
 	<string name="about">Acerca de</string>
 
+	<string name="organize">Ordenar esta carpeta</string>
+	<string name="organize_summary">Numerar las temporadas y nombrar los episodios como los lee la biblioteca</string>
+	<string name="organize_explain">Las carpetas de dentro se numeran en orden (01 - Nombre) y los vídeos toman el nombre de la carpeta con su número de episodio (Nombre - E01). Los archivos sin número se dejan como están. No se mueve nada hasta que confirmes.</string>
+	<string name="organize_setting">Ordenar carpetas</string>
+	<string name="organize_setting_summary">«Ordenar esta carpeta», en el menú de una carpeta, renombra archivos que escribieron otras apps, y eso necesita acceso a todos los archivos</string>
+	<string name="organize_permission_ok">permiso concedido</string>
+	<string name="organize_permission_missing">sin permiso todavía</string>
+	<string name="organize_permission_text">Para renombrar archivos, Android pide «Acceso a todos los archivos» para Patchouli. Solo se usa para esto, y solo cuando confirmas una lista.</string>
+	<string name="organize_grant">Dar acceso</string>
+	<string name="organize_nothing">Aquí ya está todo en orden.</string>
+	<string name="organize_apply">Renombrar %1$d</string>
+	<string name="organize_done">%d renombrados</string>
+	<string name="rename_episode">episodio</string>
+	<string name="rename_season">carpeta</string>
+	<string name="rename_same">igual</string>
+	<string name="rename_no_number">sin número</string>
+	<string name="rename_conflict">conflicto</string>
+
 	<string name="kao_kicker">Antes de 2027</string>
 	<string name="kao_title">Keep Android Open</string>
 	<string name="kao_body">Google va a exigir que todo desarrollador se registre y verifique su identidad para que una app se pueda instalar en un Android certificado, con o sin Play Store. Patchouli la hace una sola persona y no va a existir bajo esa regla.</string>
@@ -123,8 +141,6 @@
 
 	<string name="credit_art">Patchouli</string>
 	<string name="credit_art_summary">Chibi de Fantastiic (DeviantArt), CC BY-NC 3.0</string>
-	<string name="credit_design">Componentes de interfaz</string>
-	<string name="credit_design_summary">El código del kit desciende del de Komi Store (Apache 2.0); el aspecto y las paletas son de Patchouli</string>
 	<string name="credit_player">Reproductor</string>
 	<string name="credit_player_summary">libVLC de VideoLAN, LGPL 2.1, usada como biblioteca sin modificar</string>
 	<string name="credit_catalog">Catálogo</string>

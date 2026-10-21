@@ -117,6 +117,25 @@
 	<string name="empty_root_hint">Nothing in %1$s yet. Put videos there, or choose another folder in Settings.</string>
 	<string name="about">About</string>
 
+	<!-- organize -->
+	<string name="organize">Organize this folder</string>
+	<string name="organize_summary">Number the seasons and name the episodes the way the library reads them</string>
+	<string name="organize_explain">The folders inside get numbered in order (01 - Name) and the videos take the folder\'s name with their episode number (Name - E01). Files without a number are left alone. Nothing moves until you confirm.</string>
+	<string name="organize_setting">Organizing folders</string>
+	<string name="organize_setting_summary">"Organize this folder" in a folder\'s menu renames files other apps wrote, which needs all-files access</string>
+	<string name="organize_permission_ok">permission granted</string>
+	<string name="organize_permission_missing">no permission yet</string>
+	<string name="organize_permission_text">To rename files, Android asks for \"All files access\" for Patchouli. It is used only for this, and only when you confirm a list.</string>
+	<string name="organize_grant">Grant access</string>
+	<string name="organize_nothing">Everything here is already in order.</string>
+	<string name="organize_apply">Rename %1$d</string>
+	<string name="organize_done">%d renamed</string>
+	<string name="rename_episode">episode</string>
+	<string name="rename_season">folder</string>
+	<string name="rename_same">as is</string>
+	<string name="rename_no_number">no number</string>
+	<string name="rename_conflict">conflict</string>
+
 	<!-- Keep Android Open -->
 	<string name="kao_kicker">Before 2027</string>
 	<string name="kao_title">Keep Android Open</string>
@@ -129,8 +148,6 @@
 	<!-- credits -->
 	<string name="credit_art">Patchouli</string>
 	<string name="credit_art_summary">Chibi by Fantastiic (DeviantArt), CC BY-NC 3.0</string>
-	<string name="credit_design">UI components</string>
-	<string name="credit_design_summary">The kit\'s code descends from Komi Store\'s (Apache 2.0); the look and the palettes are Patchouli\'s</string>
 	<string name="credit_player">Player</string>
 	<string name="credit_player_summary">libVLC by VideoLAN, LGPL 2.1, used as an unmodified library</string>
 	<string name="credit_catalog">Catalogue</string>

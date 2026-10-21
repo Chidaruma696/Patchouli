@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchouli.app.BuildConfig
 import com.patchouli.app.R
+import androidx.compose.ui.platform.LocalContext
+import com.patchouli.app.library.Organizer
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.rememberRootPicker
 import com.patchouli.app.ui.kit.KitCheckbox
@@ -120,7 +122,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 				showDivider = true,
 				trailing = { KitCheckbox(checked = AppPrefs.coversOnline, onCheckedChange = { AppPrefs.updateCoversOnline(it) }) },
 			)
-			KitListRow(title = stringResource(R.string.rescan), subtitle = stringResource(R.string.rescan_summary), onClick = onRescan)
+			KitListRow(title = stringResource(R.string.rescan), subtitle = stringResource(R.string.rescan_summary), onClick = onRescan, showDivider = true)
+			val context = LocalContext.current
+			KitListRow(
+				title = stringResource(R.string.organize_setting),
+				subtitle = stringResource(R.string.organize_setting_summary) + " · " + stringResource(if (Organizer.hasPermission(context)) R.string.organize_permission_ok else R.string.organize_permission_missing),
+				onClick = { Organizer.permissionIntent(context)?.let { runCatching { context.startActivity(it) } } },
+			)
 		}
 
 		KitSectionHead(label = stringResource(R.string.about), kicker = "情報")

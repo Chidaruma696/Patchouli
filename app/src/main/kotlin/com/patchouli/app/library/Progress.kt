@@ -46,6 +46,19 @@ object Progress {
 		prefs().edit { putString(path, "${mark.positionMs}|${mark.lengthMs}|${mark.at}") }
 	}
 
+	/** A file was renamed: its bookmark follows. */
+	fun move(from: String, to: String) {
+		val mark = marks.remove(from) ?: return
+		marks[to] = mark
+		prefs().edit { remove(from); putString(to, "${mark.positionMs}|${mark.lengthMs}|${mark.at}") }
+	}
+
+	/** A folder was renamed: every bookmark under it follows. */
+	fun movePrefix(fromDir: String, toDir: String) {
+		val prefix = fromDir.trimEnd('/') + "/"
+		marks.keys.filter { it.startsWith(prefix) }.toList().forEach { old -> move(old, toDir.trimEnd('/') + "/" + old.removePrefix(prefix)) }
+	}
+
 	fun forget(path: String) {
 		marks.remove(path)
 		prefs().edit { remove(path) }

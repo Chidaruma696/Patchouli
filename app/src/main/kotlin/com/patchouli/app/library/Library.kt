@@ -66,6 +66,12 @@ object Library {
 
 	fun videoAt(path: String): Video? = byPath[path]
 
+	/** Where a folder of the tree lives on disk: the primary storage, or another volume under /storage. */
+	fun absolute(folder: Folder): java.io.File {
+		val primary = java.io.File(Environment.getExternalStorageDirectory(), folder.path)
+		return if (primary.isDirectory) primary else java.io.File("/storage", folder.path)
+	}
+
 	/** The videos of the same folder, in order: what plays after this one. */
 	fun siblingsOf(video: Video): List<Video> = find(video.folderPath)?.sortedVideos()?.takeIf { it.isNotEmpty() } ?: listOf(video)
 

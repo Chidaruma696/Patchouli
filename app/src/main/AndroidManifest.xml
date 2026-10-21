@@ -6,11 +6,15 @@
 	<!-- the videos: MediaStore on 13+, the old storage permission before that -->
 	<uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+	<!-- only for "organize this folder": renaming files that other apps wrote needs all-files access on 11+ -->
+	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
 	<application
 		android:name=".PatchouliApp"
 		android:allowBackup="true"
 		android:appCategory="video"
+		android:requestLegacyExternalStorage="true"
 		android:icon="@mipmap/ic_launcher"
 		android:label="@string/app_name"
 		android:supportsRtl="true"
