@@ -159,7 +159,11 @@ object Metadata {
 	/** Every candidate the catalogues have for a query, from the first one that answers. */
 	suspend fun candidates(query: String): List<Anime> {
 		for ((name, search) in listOf<Pair<String, suspend (String) -> List<Anime>>>("anilist" to { AniList.search(it, 10) }, "jikan" to { Jikan.search(it, 10) }, "kitsu" to { Kitsu.search(it, 10) })) {
-			synchronized(down) { down[name]?.let { if (System.currentTimeMillis() - it < DOWN_FOR_MS) return@synchronized null else down.remove(name) } } ?: continue
+			val skip = synchronized(down) {
+				val since = down[name]
+				if (since != null && System.currentTimeMillis() - since < DOWN_FOR_MS) true else { down.remove(name); false }
+			}
+			if (skip) continue
 			try {
 				val found = search(query)
 				if (found.isNotEmpty()) return found
