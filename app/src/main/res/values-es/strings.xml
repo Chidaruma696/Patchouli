@@ -25,7 +25,7 @@
 	<string name="cover_other_summary">Otras coincidencias del catálogo, o una búsqueda distinta</string>
 	<string name="cover_web">Buscar en la web</string>
 	<string name="cover_web_summary">Búsqueda de imágenes de DuckDuckGo, dentro de la app</string>
-	<string name="cover_web_hint">Mantén el dedo sobre una imagen para usarla de carátula</string>
+	<string name="cover_web_hint">Toca una imagen para usarla de carátula</string>
 	<string name="cover_use_title">¿Usar esta imagen?</string>
 	<string name="cover_use">Usarla</string>
 	<string name="cover_web_failed">Esa imagen no se pudo descargar; prueba otra</string>

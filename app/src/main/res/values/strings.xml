@@ -26,7 +26,7 @@
 	<string name="cover_other_summary">Other matches from the catalogue, or a different search</string>
 	<string name="cover_web">Look on the web</string>
 	<string name="cover_web_summary">DuckDuckGo image search, inside the app</string>
-	<string name="cover_web_hint">Hold your finger on an image to use it as the cover</string>
+	<string name="cover_web_hint">Tap an image to use it as the cover</string>
 	<string name="cover_use_title">Use this image?</string>
 	<string name="cover_use">Use it</string>
 	<string name="cover_web_failed">That image could not be downloaded; try another</string>

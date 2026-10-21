@@ -1,6 +1,7 @@
 package com.patchouli.app.ui.screens
 
 import android.annotation.SuppressLint
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -56,6 +57,33 @@ private const val DDG = "https://duckduckgo.com/"
 
 private fun imagesUrl(query: String) = "$DDG?q=${URLEncoder.encode(query, "UTF-8")}&iax=images&ia=images"
 
+/** A tap on any image of the page comes to us instead of opening DuckDuckGo's detail panel. */
+private const val TAP_SCRIPT = """
+(function () {
+	if (window.__patchouli) return;
+	window.__patchouli = true;
+	document.addEventListener('click', function (e) {
+		var t = e.target;
+		while (t && t.tagName !== 'IMG') t = t.parentElement;
+		if (!t) return;
+		var src = t.currentSrc || t.src || t.getAttribute('data-src');
+		if (!src) return;
+		e.preventDefault();
+		e.stopPropagation();
+		Patchouli.pick(src);
+	}, true);
+})();
+"""
+
+/** The image a tap landed on: the original behind DuckDuckGo's thumbnail proxy first, the thumbnail itself after. */
+private fun candidatesFor(src: String): List<String> {
+	val url = if (src.startsWith("//")) "https:$src" else src
+	val original = runCatching {
+		if (url.contains("/iu/?") || url.contains("/iu?")) android.net.Uri.parse(url).getQueryParameter("u") else null
+	}.getOrNull()?.takeIf { it.startsWith("http") }
+	return listOfNotNull(original, url.takeIf { it.startsWith("http") }).distinct()
+}
+
 /**
  * DuckDuckGo's image search inside the app, as a real browser: no API to break. A long press on
  * any image offers it as the folder's cover.
@@ -67,7 +95,7 @@ fun WebCoverPicker(folder: Folder, initialQuery: String, onDismiss: () -> Unit, 
 	val scope = rememberCoroutineScope()
 	var query by remember { mutableStateOf(initialQuery) }
 	var webView by remember { mutableStateOf<WebView?>(null) }
-	var candidate by remember { mutableStateOf<String?>(null) }
+	var candidate by remember { mutableStateOf<List<String>?>(null) }
 	var saving by remember { mutableStateOf(false) }
 	var failed by remember { mutableStateOf(false) }
 
@@ -98,12 +126,23 @@ fun WebCoverPicker(folder: Folder, initialQuery: String, onDismiss: () -> Unit, 
 						settings.domStorageEnabled = true
 						settings.loadWithOverviewMode = true
 						settings.useWideViewPort = true
-						webViewClient = WebViewClient()
+						webViewClient = object : WebViewClient() {
+							override fun onPageFinished(view: WebView, url: String?) {
+								view.evaluateJavascript(TAP_SCRIPT, null)
+							}
+						}
+						addJavascriptInterface(object {
+							@JavascriptInterface
+							fun pick(src: String) {
+								post { candidate = candidatesFor(src).takeIf { it.isNotEmpty() } }
+							}
+						}, "Patchouli")
+						// a long press still works, for the odd image the script does not catch
 						setOnLongClickListener {
 							val hit = hitTestResult
 							val url = hit.extra
-							if (url != null && (hit.type == WebView.HitTestResult.IMAGE_TYPE || hit.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) && url.startsWith("http")) {
-								candidate = url
+							if (url != null && (hit.type == WebView.HitTestResult.IMAGE_TYPE || hit.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE)) {
+								candidate = candidatesFor(url).takeIf { it.isNotEmpty() }
 								true
 							} else false
 						}
@@ -116,7 +155,8 @@ fun WebCoverPicker(folder: Folder, initialQuery: String, onDismiss: () -> Unit, 
 		}
 	}
 
-	candidate?.let { url ->
+	candidate?.let { urls ->
+		val url = urls.last() // the thumbnail is the one sure to show in the preview
 		KitDialog(
 			onDismissRequest = { if (!saving) { candidate = null; failed = false } },
 			title = { KitText(stringResource(R.string.cover_use_title), role = KitTextRole.Title) },
@@ -135,7 +175,7 @@ fun WebCoverPicker(folder: Folder, initialQuery: String, onDismiss: () -> Unit, 
 					onClick = {
 						saving = true; failed = false
 						scope.launch {
-							val ok = Metadata.setCustomCoverFromUrl(folder, url, DDG)
+							val ok = Metadata.setCustomCoverFromUrl(folder, urls, DDG)
 							saving = false
 							if (ok) { candidate = null; onPicked() } else failed = true
 						}

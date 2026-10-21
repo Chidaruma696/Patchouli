@@ -200,20 +200,23 @@ object Metadata {
 		return true
 	}
 
-	/** An image found on the web: downloaded into our files; false when it is not an image after all. */
-	suspend fun setCustomCoverFromUrl(folder: Folder, url: String, referer: String?): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
+	/** An image found on the web, the first of [urls] that downloads and decodes (the original, then the thumbnail). */
+	suspend fun setCustomCoverFromUrl(folder: Folder, urls: List<String>, referer: String?): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
 		val target = File(File(PatchouliAppContext.filesDir(), "covers").also { it.mkdirs() }, fileFor(folder.path).nameWithoutExtension + ".jpg")
-		val ok = runCatching {
-			val request = okhttp3.Request.Builder().url(url)
-				.header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36")
-				.apply { if (referer != null) header("Referer", referer) }
-				.build()
-			okhttp3.OkHttpClient().newCall(request).execute().use { r ->
-				if (r.code != 200) error("HTTP ${r.code}")
-				target.outputStream().use { r.body.byteStream().copyTo(it) }
-			}
-			android.graphics.BitmapFactory.decodeFile(target.absolutePath) ?: error("not an image")
-		}.isSuccess
+		val client = okhttp3.OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).readTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
+		val ok = urls.any { url ->
+			runCatching {
+				val request = okhttp3.Request.Builder().url(url)
+					.header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36")
+					.apply { if (referer != null) header("Referer", referer) }
+					.build()
+				client.newCall(request).execute().use { r ->
+					if (r.code != 200) error("HTTP ${r.code}")
+					target.outputStream().use { r.body.byteStream().copyTo(it) }
+				}
+				android.graphics.BitmapFactory.decodeFile(target.absolutePath) ?: error("not an image")
+			}.onFailure { Log.w(TAG, "cover from $url failed: ${it.message}") }.isSuccess
+		}
 		if (!ok) { target.delete(); return@withContext false }
 		val current = cache[folder.path]
 		store(folder.path, Lookup(current?.query ?: Names.series(folder.name), current?.anime, System.currentTimeMillis(), manual = current?.manual == true, customCover = target.absolutePath))
