@@ -54,7 +54,7 @@ data class Anime(
 
 /**
  * AniList (graphql.anilist.co): no key for public reads. One search per folder, spaced out, and a
- * 429 waits what the server says. Same client Seija and Hatate use, trimmed to what a cover needs.
+ * 429 waits what the server says.
  */
 object AniList {
 

@@ -41,7 +41,7 @@ class Folder(val path: String, val name: String) {
 	/** The first video of the shelf, for a thumbnail when there is no cover. */
 	val firstVideo: Video? get() = sortedVideos().firstOrNull() ?: sortedFolders().firstNotNullOfOrNull { it.firstVideo }
 
-	/** A folder that only holds one folder shows as that one: "Movies/Seija" reads "Seija". */
+	/** A folder that only holds one folder shows as that one: "Movies/Anime" reads "Anime". */
 	fun collapsed(): Folder {
 		var f = this
 		while (f.videos.isEmpty() && f.folders.size == 1) f = f.folders.first()

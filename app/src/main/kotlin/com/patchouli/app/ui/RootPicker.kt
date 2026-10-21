@@ -11,7 +11,7 @@ import androidx.compose.ui.res.stringResource
 import com.patchouli.app.R
 
 /**
- * The system folder picker, turned into a path of our tree: "primary:Movies/Seija" is "Movies/Seija",
+ * The system folder picker, turned into a path of our tree: "primary:Movies/Anime" is "Movies/Anime",
  * an SD card's "1234-5678:Anime" is "1234-5678/Anime" (the tree hangs other volumes under their name).
  */
 fun treeUriToPath(uri: Uri): String? {

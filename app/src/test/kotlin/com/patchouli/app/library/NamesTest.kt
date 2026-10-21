@@ -7,7 +7,7 @@ import org.junit.Test
 class NamesTest {
 
 	@Test
-	fun episodeFromSeijaNames() {
+	fun episodeFromDownloaderNames() {
 		assertEquals(1, Names.episode("Fate_Zero - E01.mp4"))
 		assertEquals(3, Names.episode("03 Episodio 3 (AnimeAv1).mp4"))
 		assertEquals(12, Names.episode("Fate_stay night - E12"))

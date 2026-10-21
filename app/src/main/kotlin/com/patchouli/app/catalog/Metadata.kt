@@ -55,7 +55,7 @@ object Metadata {
 	private val skipNames = setOf(
 		"download", "downloads", "dcim", "camera", "whatsapp", "telegram", "screenshots", "screen recordings",
 		"movies", "video", "videos", "pictures", "recordings", "android", "media", "sent", "private", "status",
-		"images", "music", "documents", "bluetooth", "seija", "hatate", "patchouli", "recorder", "wallpapers",
+		"images", "music", "documents", "bluetooth", "patchouli", "recorder", "wallpapers",
 	)
 
 	fun init(context: Context) {

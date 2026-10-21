@@ -27,7 +27,7 @@ MX Player era el reproductor de cualquiera con una carpeta de episodios; luego l
 | --- | --- | --- |
 | Todos los vídeos del teléfono, agrupados por carpeta. Una carpeta con episodios recibe su carátula, año y sinopsis de AniList; una con temporadas se vuelve una estantería. «Seguir viendo» arriba del todo. | Brillo a la izquierda, volumen a la derecha, arrastrar de lado para buscar, doble toque para saltar, mantener para 2×, pellizco para el zoom. Bloqueo, aspecto, pistas de subtítulos y audio, velocidad, cambio de decodificador. | libVLC: decodificación por hardware con caída a software, así que el MKV que nada abre aquí se ve. |
 
-Nació para leer las carpetas que baja [Seija](https://github.com/Chidaruma696/Seija) (`Franquicia/01 - Serie/Serie - E01.mp4`), pero cualquier carpeta de vídeos funciona igual.
+Una carpeta organizada como `Franquicia/01 - Serie/Serie - E01.mp4` se lee como un árbol (la franquicia, luego sus series en orden, luego los episodios), pero cualquier carpeta de vídeos funciona igual.
 
 <br/>
 
@@ -60,7 +60,7 @@ La interfaz es un port del sistema de diseño de [Komi Store](https://github.com
 
 ## 🔧 Cómo funciona
 
-- **Biblioteca.** Una consulta al MediaStore da todos los vídeos con su ruta y duración; la app arma un árbol de carpetas a partir de las rutas. Las cadenas de carpetas con una sola hija se colapsan (`Movies/Seija` se lee «Seija»). Los números de episodio salen del nombre del archivo (`E01`, `- 03`, `03 Título`, `Título 03 [1080p]`).
+- **Biblioteca.** Una consulta al MediaStore da todos los vídeos con su ruta y duración; la app arma un árbol de carpetas a partir de las rutas. Las cadenas de carpetas con una sola hija se colapsan (`Movies/Anime` se lee «Anime»). Los números de episodio salen del nombre del archivo (`E01`, `- 03`, `03 Título`, `Título 03 [1080p]`).
 - **Carátulas.** El nombre de cada carpeta, sin su prefijo `01 - ` ni guiones bajos, se busca una vez en AniList (sin clave). La respuesta se guarda en disco; los nombres comunes (Camera, Download…) nunca se buscan, y cualquier carpeta se puede marcar «no es una serie».
 - **Progreso.** Posición y duración de cada archivo visto, en SharedPreferences. Pasado el 95 % cuenta como visto; por debajo aparece en «Seguir viendo» y se abre donde se quedó.
 - **Reproductor.** `PlayerActivity` tiene a libVLC; `PlayerScreen` es Compose sobre un `VLCVideoLayout`. Todos los gestos viven en un solo detector de entrada para que nunca se peleen.
@@ -81,14 +81,14 @@ JDK 17+, SDK de Android 36. La firma de release lee `keystore.*` de `local.prope
 
 ## 🗺 Hoja de ruta
 
-- [x] Biblioteca desde el MediaStore, árbol de carpetas, la estructura de Seija
+- [x] Biblioteca desde el MediaStore, árbol de carpetas, la estructura por franquicias
 - [x] Carátulas y sinopsis de AniList, con caché e interruptor «no es una serie»
 - [x] Seguir viendo, reanudar, siguiente episodio
 - [x] Gestos: brillo, volumen, búsqueda, doble toque, mantener para 2×, pellizco
 - [x] Bloqueo, aspecto, pistas de subtítulos y audio, velocidad, decodificador HW/SW, rotación
 - [ ] Picture in picture
 - [ ] Subtítulos externos (`.srt` junto al archivo)
-- [ ] Leer el ID de AniList que Seija dejará en cada carpeta en vez de buscar por nombre
+- [ ] Leer un ID de AniList dejado en la carpeta (`anilist.json`) en vez de buscar por nombre
 - [ ] Buscar dentro de la biblioteca
 
 <br/>

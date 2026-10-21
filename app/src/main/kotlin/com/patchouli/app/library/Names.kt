@@ -27,7 +27,7 @@ object Names {
 		return null
 	}
 
-	/** A folder name as a search query: no leading "01 - ", underscores back to spaces (Seija writes them for slashes). */
+	/** A folder name as a search query: no leading "01 - ", underscores back to spaces (downloaders write them for slashes). */
 	fun series(folderName: String): String =
 		folderName
 			.replace(Regex("""^\d{1,3}\s*[-.]\s*"""), "")
