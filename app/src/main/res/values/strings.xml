@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Patchouli</string>
+
+	<!-- tabs and titles -->
+	<string name="library">Library</string>
+	<string name="settings">Settings</string>
+	<string name="library_kicker">every video on this phone, by folder</string>
+	<string name="continue_watching">Continue watching</string>
+	<string name="folders">Folders</string>
+	<string name="episodes">Episodes</string>
+	<string name="videos">Videos</string>
+	<plurals name="videos_n">
+		<item quantity="one">%1$d video</item>
+		<item quantity="other">%1$d videos</item>
+	</plurals>
+	<string name="empty_library">No videos yet</string>
+	<string name="empty_library_hint">Patchouli lists every video in the phone\'s storage, grouped the way its folders are. Download something, or copy a folder over, and it shows up here.</string>
+	<string name="scanning">Looking through the shelves…</string>
+	<string name="rescan">Rescan</string>
+	<string name="episode_n">Episode %1$d</string>
+	<string name="watched">Watched</string>
+	<string name="resume_at">Resume at %1$s</string>
+	<string name="no_match">No match found</string>
+	<string name="not_a_series">Not a series</string>
+	<string name="not_a_series_summary">Do not ask AniList about this folder</string>
+	<string name="is_a_series">Look it up on AniList</string>
+	<string name="synopsis_more">More</string>
+	<string name="synopsis_less">Less</string>
+	<string name="episodes_of">%1$d of %2$d episodes</string>
+
+	<!-- permission -->
+	<string name="permission_title">Patchouli needs to see your videos</string>
+	<string name="permission_text">It reads the video files on this phone to build the library. Nothing is uploaded; the only thing that leaves the phone is the name of a folder when it asks AniList for a cover.</string>
+	<string name="permission_button">Allow</string>
+	<string name="permission_settings">Open system settings</string>
+
+	<!-- player -->
+	<string name="play">Play</string>
+	<string name="pause">Pause</string>
+	<string name="previous">Previous</string>
+	<string name="next">Next</string>
+	<string name="lock">Lock</string>
+	<string name="unlock">Unlock</string>
+	<string name="back">Back</string>
+	<string name="more">More</string>
+	<string name="subtitles">Subtitles</string>
+	<string name="audio_tracks">Audio</string>
+	<string name="aspect">Aspect</string>
+	<string name="rotate">Rotation</string>
+	<string name="decoder_hw">HW</string>
+	<string name="decoder_sw">SW</string>
+	<string name="decoder_summary">Hardware decoding is faster and kinder to the battery; software decoding plays anything</string>
+	<string name="speed">Speed</string>
+	<string name="track_disable">Off</string>
+	<string name="track_n">Track %1$d</string>
+	<string name="no_tracks">No tracks</string>
+	<string name="scale_fit">Fit</string>
+	<string name="scale_fill">Fill</string>
+	<string name="scale_stretch">Stretch</string>
+	<string name="scale_169">16:9</string>
+	<string name="scale_43">4:3</string>
+	<string name="scale_original">Original</string>
+	<string name="brightness">Brightness</string>
+	<string name="volume">Volume</string>
+	<string name="err_cannot_play">This video could not be opened</string>
+	<string name="retry">Retry</string>
+	<string name="end_of_list">End of the folder</string>
+
+	<!-- settings -->
+	<string name="appearance">Appearance</string>
+	<string name="mode_system">System</string>
+	<string name="mode_light">Light</string>
+	<string name="mode_dark">Dark</string>
+	<string name="playback">Playback</string>
+	<string name="resume_playback">Resume where I left off</string>
+	<string name="resume_playback_summary">Opens each video at the last position instead of the start</string>
+	<string name="autoplay_next">Play the next episode</string>
+	<string name="autoplay_next_summary">When one ends, the next file in the folder starts</string>
+	<string name="default_decoder">Decoder</string>
+	<string name="seek_step">Double-tap seek</string>
+	<string name="seek_step_summary">Seconds skipped with a double tap on either side</string>
+	<string name="gestures">Gestures</string>
+	<string name="gestures_summary">Left side up and down for brightness, right side for volume, sideways to seek, double tap to skip, hold to play at double speed, pinch to zoom</string>
+	<string name="library_section">Library</string>
+	<string name="covers_online">Covers and summaries from AniList</string>
+	<string name="covers_online_summary">Folder names are looked up on AniList to show the cover, the year and the synopsis. Nothing else is sent.</string>
+	<string name="rescan_summary">Look through the storage again</string>
+	<string name="about">About</string>
+
+	<!-- Keep Android Open -->
+	<string name="kao_kicker">Before 2027</string>
+	<string name="kao_title">Keep Android Open</string>
+	<string name="kao_body">Google will require every developer to register and verify their identity before an app can be installed on a certified Android phone, Play Store or not. Patchouli is made by one person and will not exist under that rule.</string>
+	<string name="kao_learn">What is going on</string>
+	<string name="kao_hide">Hide</string>
+	<string name="kao_row_summary">Why apps like this one may stop being installable</string>
+	<string name="kao_show_banner">Show the notice in the library</string>
+
+	<!-- credits -->
+	<string name="credit_design">Design</string>
+	<string name="credit_design_summary">Component structure from Komi Store (Apache 2.0); the look and the palettes are Patchouli\'s</string>
+	<string name="credit_player">Player</string>
+	<string name="credit_player_summary">libVLC by VideoLAN, LGPL 2.1, used as an unmodified library</string>
+	<string name="credit_catalog">Catalogue</string>
+	<string name="credit_catalog_summary">Covers and summaries come from AniList</string>
+	<string name="credit_licenses">Third-party notices</string>
+	<string name="credit_licenses_summary">Every library and font, with its license</string>
+	<string name="credit_source_code">Source code</string>
+	<string name="credit_source_code_summary">Apache 2.0, on GitHub</string>
+	<string name="credit_touhou">Touhou Project and its characters belong to Team Shanghai Alice (ZUN); unofficial fan work made under their guidelines for derivative works, with no affiliation or endorsement.</string>
+</resources>

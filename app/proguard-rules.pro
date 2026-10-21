@@ -1,0 +1,3 @@
+-keep class org.videolan.** { *; }
+-keepclassmembers class **$$serializer { *; }
+-keepclasseswithmembers class * { @kotlinx.serialization.Serializable <fields>; }
