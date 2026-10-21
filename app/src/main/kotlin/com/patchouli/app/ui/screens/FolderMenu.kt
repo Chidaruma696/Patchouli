@@ -66,7 +66,7 @@ fun FolderMenu(folder: Folder, onDismiss: () -> Unit) {
 		}
 	}
 
-	KitSheet(onDismiss = onDismiss, title = lookup?.anime?.title ?: Names.series(folder.name), titleJp = if (searching) "検索" else null) {
+	KitSheet(onDismiss = onDismiss, title = Names.series(folder.name), titleJp = if (searching) "検索" else lookup?.anime?.title) {
 		if (!searching) {
 			KitListContainer {
 				KitListRow(

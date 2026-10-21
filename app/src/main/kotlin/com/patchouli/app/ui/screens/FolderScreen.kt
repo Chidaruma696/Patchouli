@@ -69,7 +69,7 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 	val videos = remember(folder) { folder.sortedVideos() }
 	var menu by remember { mutableStateOf(false) }
 	var menuFor by remember { mutableStateOf<Folder?>(null) }
-	val title = anime?.title ?: Names.series(folder.name)
+	val title = Names.series(folder.name)
 
 	KitScaffold(
 		topBar = {

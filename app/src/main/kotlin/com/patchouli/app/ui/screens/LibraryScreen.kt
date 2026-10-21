@@ -192,7 +192,8 @@ fun FolderCard(folder: Folder, onClick: () -> Unit, onLongClick: (() -> Unit)? =
 				}
 			}
 			Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-				KitText(anime?.title ?: Names.series(folder.name), role = KitTextRole.Stamp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
+				// the folder's own name, always: the catalogue's title lives inside the folder, not on its spine
+				KitText(Names.series(folder.name), role = KitTextRole.Stamp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
 				KitText(
 					text = buildString {
 						append(pluralStringResource(R.plurals.videos_n, folder.total, folder.total))
