@@ -38,6 +38,8 @@ import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Library
 import com.patchouli.app.library.Video
 import com.patchouli.app.player.PlayerActivity
+import com.patchouli.app.ui.AppPrefs
+import com.patchouli.app.ui.rememberRootPicker
 import com.patchouli.app.ui.kit.KitBottomBar
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonVariant
@@ -98,6 +100,10 @@ private fun App() {
 		PermissionScreen(onAsk = { ask.launch(permission) })
 		return
 	}
+	if (!AppPrefs.rootChosen) {
+		RootScreen()
+		return
+	}
 
 	var tab by rememberSaveable { mutableStateOf(TAB_LIBRARY) }
 	val stack = remember { mutableStateListOf<String>() }
@@ -145,6 +151,24 @@ private fun App() {
 		when (tab) {
 			TAB_SETTINGS -> SettingsScreen(contentPadding = padding, onRescan = rescan)
 			else -> LibraryScreen(contentPadding = padding, onOpenFolder = open, onPlay = { video -> play(video, Library.siblingsOf(video)) })
+		}
+	}
+}
+
+/** First start: which folder is the library. */
+@Composable
+private fun RootScreen() {
+	val colors = LocalPersonality.current.colors
+	val pick = rememberRootPicker()
+	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli") }) { padding ->
+		Column(
+			modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+			verticalArrangement = Arrangement.spacedBy(14.dp),
+		) {
+			KitText(stringResource(R.string.root_title), role = KitTextRole.Display)
+			KitText(stringResource(R.string.root_text), role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false)
+			KitButton(onClick = pick, label = stringResource(R.string.root_choose), emphasized = true)
+			KitButton(onClick = { AppPrefs.updateRootPath("") }, label = stringResource(R.string.root_whole_phone), variant = KitButtonVariant.Text)
 		}
 	}
 }

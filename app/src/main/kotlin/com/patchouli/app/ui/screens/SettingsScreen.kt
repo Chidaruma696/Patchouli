@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.patchouli.app.BuildConfig
 import com.patchouli.app.R
 import com.patchouli.app.ui.AppPrefs
+import com.patchouli.app.ui.rememberRootPicker
 import com.patchouli.app.ui.kit.KitCheckbox
 import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitListRow
@@ -101,7 +102,17 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 		}
 
 		KitSectionHead(label = stringResource(R.string.library_section), kicker = "書庫")
+		val pickRoot = rememberRootPicker()
 		KitListContainer {
+			KitListRow(
+				title = stringResource(R.string.root_folder),
+				subtitle = AppPrefs.rootPath.ifEmpty { stringResource(R.string.root_whole_phone) } + " · " + stringResource(R.string.root_folder_summary),
+				onClick = pickRoot,
+				showDivider = true,
+			)
+			if (AppPrefs.rootPath.isNotEmpty()) {
+				KitListRow(title = stringResource(R.string.root_whole_phone), onClick = { AppPrefs.updateRootPath("") }, showDivider = true)
+			}
 			KitListRow(
 				title = stringResource(R.string.covers_online),
 				subtitle = stringResource(R.string.covers_online_summary),

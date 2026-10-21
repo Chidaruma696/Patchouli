@@ -47,6 +47,7 @@ import com.patchouli.app.library.Video
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.KitCircularProgress
 import com.patchouli.app.ui.kit.KitLinearProgress
+import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitSectionHead
 import com.patchouli.app.ui.kit.KitSurface
 import com.patchouli.app.ui.kit.KitSurfaceElevation
@@ -98,16 +99,29 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 				}
 			}
 		}
-		if (shelves.isEmpty()) {
+		val loose = Library.home?.sortedVideos().orEmpty()
+		if (shelves.isEmpty() && loose.isEmpty()) {
 			item(span = { GridItemSpan(2) }) {
 				Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
 					KitText(stringResource(R.string.empty_library), role = KitTextRole.Title, textAlign = TextAlign.Center)
-					KitText(stringResource(R.string.empty_library_hint), role = KitTextRole.Body, color = colors.onSurfaceVariant, textAlign = TextAlign.Center, uppercase = false)
+					val hint = if (AppPrefs.rootPath.isEmpty()) stringResource(R.string.empty_library_hint) else stringResource(R.string.empty_root_hint, AppPrefs.rootPath)
+					KitText(hint, role = KitTextRole.Body, color = colors.onSurfaceVariant, textAlign = TextAlign.Center, uppercase = false)
 				}
 			}
 		} else {
-			item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
-			items(shelves, key = { it.path }) { folder -> FolderCard(folder, onClick = { onOpenFolder(folder) }) }
+			if (shelves.isNotEmpty()) {
+				item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
+				items(shelves, key = { it.path }) { folder -> FolderCard(folder, onClick = { onOpenFolder(folder) }) }
+			}
+			// videos lying directly in the root folder, outside any shelf
+			if (loose.isNotEmpty()) {
+				item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.videos), kicker = "話") }
+				item(span = { GridItemSpan(2) }) {
+					KitListContainer {
+						loose.forEachIndexed { index, video -> VideoRow(video, showDivider = index < loose.lastIndex, onClick = { onPlay(video) }) }
+					}
+				}
+			}
 		}
 	}
 }

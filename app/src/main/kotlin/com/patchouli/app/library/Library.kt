@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.patchouli.app.ui.AppPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -57,8 +58,11 @@ object Library {
 
 	private var byPath: Map<String, Video> = emptyMap()
 
-	/** The shelves of the library: the top folders, chains of single folders collapsed. */
-	val shelves: List<Folder> get() = root?.sortedFolders().orEmpty()
+	/** The folder the user chose as the library (or everything when none), as far as it exists. */
+	val home: Folder? get() = root?.let { if (AppPrefs.rootPath.isEmpty()) it else find(AppPrefs.rootPath) }
+
+	/** The shelves of the library: the folders under the chosen root, chains of single folders collapsed. */
+	val shelves: List<Folder> get() = home?.sortedFolders().orEmpty()
 
 	fun videoAt(path: String): Video? = byPath[path]
 

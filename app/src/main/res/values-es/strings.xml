@@ -82,6 +82,14 @@
 	<string name="covers_online">Carátulas y sinopsis de AniList</string>
 	<string name="covers_online_summary">El nombre de cada carpeta se busca en AniList para mostrar la carátula, el año y la sinopsis. No se envía nada más.</string>
 	<string name="rescan_summary">Revisar otra vez el almacenamiento</string>
+	<string name="root_folder">Carpeta de la biblioteca</string>
+	<string name="root_folder_summary">Solo se ve lo que hay dentro de esta carpeta; sus subcarpetas son las estanterías</string>
+	<string name="root_whole_phone">Todo el teléfono</string>
+	<string name="root_choose">Elegir una carpeta</string>
+	<string name="root_title">¿Dónde guardas tus vídeos?</string>
+	<string name="root_text">Elige la carpeta que los tiene (Movies, por ejemplo). Sus subcarpetas pasan a ser las estanterías de la biblioteca, con el nombre que tienen. Se puede cambiar después en Ajustes, o usar el teléfono entero.</string>
+	<string name="root_unsupported">Esa ubicación no sirve; elige una carpeta del almacenamiento del teléfono</string>
+	<string name="empty_root_hint">Todavía no hay nada en %1$s. Pon vídeos ahí, o elige otra carpeta en Ajustes.</string>
 	<string name="about">Acerca de</string>
 
 	<string name="kao_kicker">Antes de 2027</string>

@@ -168,7 +168,7 @@ private fun AnimeHeader(anime: com.patchouli.app.catalog.Anime, watched: Int) {
 }
 
 @Composable
-private fun VideoRow(video: Video, showDivider: Boolean, onClick: () -> Unit) {
+fun VideoRow(video: Video, showDivider: Boolean, onClick: () -> Unit) {
 	val colors = LocalPersonality.current.colors
 	val mark = Progress[video.path]
 	KitListRow(

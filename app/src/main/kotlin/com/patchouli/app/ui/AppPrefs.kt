@@ -29,9 +29,17 @@ object AppPrefs {
 	/** Keep Android Open notice in the library; hidden once dismissed, can be shown again from Settings. */
 	var kaoBannerVisible by mutableStateOf(true)
 		private set
+	/** The folder the library lives in, relative to the storage root ("Movies"); empty is the whole phone. */
+	var rootPath by mutableStateOf("")
+		private set
+	/** Whether the user has answered the root question at least once. */
+	var rootChosen by mutableStateOf(false)
+		private set
 
 	fun init(context: Context) {
 		val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+		rootPath = p.getString("root_path", "") ?: ""
+		rootChosen = p.getBoolean("root_chosen", false)
 		resume = p.getBoolean("resume", true)
 		autoplayNext = p.getBoolean("autoplay_next", true)
 		hardwareDecoder = p.getBoolean("hw_decoder", true)
@@ -48,4 +56,9 @@ object AppPrefs {
 	fun updateSeekStep(value: Int) { seekStepSec = value.coerceIn(5, 60); prefs().edit { putInt("seek_step", seekStepSec) } }
 	fun updateCoversOnline(value: Boolean) { coversOnline = value; prefs().edit { putBoolean("covers_online", value) } }
 	fun updateKaoBanner(value: Boolean) { kaoBannerVisible = value; prefs().edit { putBoolean("kao_banner", value) } }
+	fun updateRootPath(value: String) {
+		rootPath = value.trim('/')
+		rootChosen = true
+		prefs().edit { putString("root_path", rootPath); putBoolean("root_chosen", true) }
+	}
 }

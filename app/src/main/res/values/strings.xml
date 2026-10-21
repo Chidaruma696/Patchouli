@@ -86,6 +86,14 @@
 	<string name="covers_online">Covers and summaries from AniList</string>
 	<string name="covers_online_summary">Folder names are looked up on AniList to show the cover, the year and the synopsis. Nothing else is sent.</string>
 	<string name="rescan_summary">Look through the storage again</string>
+	<string name="root_folder">Library folder</string>
+	<string name="root_folder_summary">Only what is inside this folder shows up; its subfolders are the shelves</string>
+	<string name="root_whole_phone">The whole phone</string>
+	<string name="root_choose">Choose a folder</string>
+	<string name="root_title">Where do you keep your videos?</string>
+	<string name="root_text">Pick the folder that holds them (Movies, for instance). Its subfolders become the shelves of the library, named as they are. You can change it later in Settings, or use the whole phone.</string>
+	<string name="root_unsupported">That location cannot be used; pick a folder of the phone\'s storage</string>
+	<string name="empty_root_hint">Nothing in %1$s yet. Put videos there, or choose another folder in Settings.</string>
 	<string name="about">About</string>
 
 	<!-- Keep Android Open -->
