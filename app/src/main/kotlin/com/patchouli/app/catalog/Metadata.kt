@@ -33,6 +33,10 @@ object Metadata {
 	private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 	private val cache = mutableStateMapOf<String, Lookup>()
 	private val inflight = HashSet<String>()
+	private val failures = HashMap<String, Long>()
+	/** The last error per folder, for the folder's menu to show why there is no cover. */
+	val errors = mutableStateMapOf<String, String>()
+	private const val FAILURE_BACKOFF_MS = 60_000L
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 	private val skipNames = setOf(
@@ -65,15 +69,29 @@ object Metadata {
 		val current = cache[folder.path]
 		if (current != null && (current.anime != null || current.manual || System.currentTimeMillis() - current.at < RETRY_AFTER_MS)) return
 		if (folder.name.lowercase() in skipNames || folder.total == 0) return
-		synchronized(inflight) { if (!inflight.add(folder.path)) return }
+		synchronized(inflight) {
+			// a failed lookup (no network, a 403) waits a minute before trying again
+			val failedAt = failures[folder.path]
+			if (failedAt != null && System.currentTimeMillis() - failedAt < FAILURE_BACKOFF_MS) return
+			if (!inflight.add(folder.path)) return
+		}
 		val query = Names.series(folder.name)
 		scope.launch {
 			try {
-				val hit = AniList.search(query).firstOrNull()
+				val hit = try {
+					AniList.search(query).firstOrNull()
+				} catch (e: Exception) {
+					// AniList goes down now and then; MyAnimeList through Jikan knows the same shows
+					Log.w(TAG, "AniList failed for '$query' (${e.message}), asking Jikan")
+					Jikan.search(query).firstOrNull()
+				}
 				store(folder.path, Lookup(query, hit, System.currentTimeMillis()))
+				synchronized(inflight) { errors.remove(folder.path) }
 			} catch (e: Exception) {
 				// the network is not there: leave it unanswered, the next visit asks again
 				Log.w(TAG, "lookup of '$query' failed: ${e.message}")
+				synchronized(inflight) { failures[folder.path] = System.currentTimeMillis() }
+				errors[folder.path] = e.message ?: "?"
 			} finally {
 				synchronized(inflight) { inflight.remove(folder.path) }
 			}

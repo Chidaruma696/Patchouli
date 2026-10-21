@@ -123,6 +123,9 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 			if (lookup != null && lookup.anime == null && !notSeries) {
 				KitText(stringResource(R.string.no_match) + " · " + lookup.query, role = KitTextRole.Body, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp), uppercase = false)
 			}
+			Metadata.errors[folder.path]?.let { err ->
+				KitText(err, role = KitTextRole.Mono, color = colors.error, modifier = Modifier.padding(top = 10.dp))
+			}
 		}
 	}
 }

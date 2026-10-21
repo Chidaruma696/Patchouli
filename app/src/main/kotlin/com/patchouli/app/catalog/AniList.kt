@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit
 @Serializable
 data class Anime(
 	val id: Int,
+	/** Where [id] lives: "anilist" or "mal". */
+	val source: String = "anilist",
 	val title: String,
 	val titleEnglish: String? = null,
 	val cover: String? = null,
@@ -60,6 +62,7 @@ object AniList {
 	private const val TAG = "AniList"
 	private const val SPACING_MS = 700L
 	private const val RETRIES = 2
+	private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14) Patchouli/${com.patchouli.app.BuildConfig.VERSION_NAME}"
 
 	private const val SEARCH = """
 		query(${'$'}s: String, ${'$'}n: Int) {
@@ -107,6 +110,8 @@ object AniList {
 			}
 			val request = Request.Builder().url(URL)
 				.header("Accept", "application/json")
+				// OkHttp's own user agent gets a 403 from AniList's edge; a browser-shaped one does not
+				.header("User-Agent", USER_AGENT)
 				.post(payload.toRequestBody("application/json".toMediaType()))
 				.build()
 			val (code, retryAfter, body) = client.newCall(request).execute().use { r -> Triple(r.code, r.header("Retry-After")?.toLongOrNull(), r.body.string()) }
