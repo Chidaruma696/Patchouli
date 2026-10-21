@@ -615,13 +615,16 @@ fun KitTopBar(
 			.statusBarsPadding(),
 	) {
 		if (art != null) {
-			Image(
-				painter = art, contentDescription = null, contentScale = ContentScale.Fit,
-				modifier = Modifier.align(Alignment.BottomStart).padding(start = 6.dp).height(84.dp),
-			)
+			// matchParentSize: the figure takes the bar's height, never the other way round
+			Box(Modifier.matchParentSize()) {
+				Image(
+					painter = art, contentDescription = null, contentScale = ContentScale.Fit,
+					modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 4.dp).height(56.dp),
+				)
+			}
 		}
 		Row(
-			modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
+			modifier = Modifier.fillMaxWidth().padding(start = if (art != null && leading == null) 40.dp else 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
 			verticalAlignment = Alignment.CenterVertically,
 			horizontalArrangement = Arrangement.spacedBy(12.dp),
 		) {
