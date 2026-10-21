@@ -86,10 +86,12 @@ JDK 17+, Android SDK 36. Release signing reads `keystore.*` from `local.properti
 - [x] Continue watching, resume, next episode
 - [x] Gestures: brightness, volume, seek, double tap, hold for 2×, pinch
 - [x] Lock, aspect ratio, subtitle and audio tracks, speed, HW/SW decoder, rotation
-- [ ] Picture in picture
-- [ ] External subtitles (`.srt` next to the file)
+- [x] Picture in picture: leave the player and it keeps playing in a floating window
+- [x] External subtitles: `.srt`/`.ass`/`.vtt` next to the file are picked up, or load one from anywhere
+- [x] Search inside the library
+- [x] Send to a TV over DLNA: the phone serves the file, the TV plays it where you were, the phone becomes the remote
 - [ ] Read an AniList id left in the folder (`anilist.json`) instead of searching by name
-- [ ] Search inside the library
+- [ ] Chromecast (Google's Cast SDK; kept out so far to stay free of Play services)
 
 <br/>
 

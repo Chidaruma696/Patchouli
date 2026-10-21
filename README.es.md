@@ -86,10 +86,12 @@ JDK 17+, SDK de Android 36. La firma de release lee `keystore.*` de `local.prope
 - [x] Seguir viendo, reanudar, siguiente episodio
 - [x] Gestos: brillo, volumen, búsqueda, doble toque, mantener para 2×, pellizco
 - [x] Bloqueo, aspecto, pistas de subtítulos y audio, velocidad, decodificador HW/SW, rotación
-- [ ] Picture in picture
-- [ ] Subtítulos externos (`.srt` junto al archivo)
+- [x] Imagen en imagen: sales del reproductor y sigue en una ventana flotante
+- [x] Subtítulos externos: los `.srt`/`.ass`/`.vtt` junto al archivo se cargan solos, o cargas uno de donde sea
+- [x] Buscar dentro de la biblioteca
+- [x] Mandar a la tele por DLNA: el teléfono sirve el archivo, la tele lo reproduce donde ibas, el teléfono queda de control
 - [ ] Leer un ID de AniList dejado en la carpeta (`anilist.json`) en vez de buscar por nombre
-- [ ] Buscar dentro de la biblioteca
+- [ ] Chromecast (el Cast SDK de Google; fuera por ahora para no depender de los servicios de Play)
 
 <br/>
 

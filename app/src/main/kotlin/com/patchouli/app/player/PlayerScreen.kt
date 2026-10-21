@@ -50,7 +50,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.runtime.collectAsState
 import com.patchouli.app.R
+import com.patchouli.app.cast.CastRemote
+import com.patchouli.app.cast.CastSheet
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
@@ -113,6 +116,8 @@ fun PlayerScreen(activity: PlayerActivity) {
 	var surface by remember { mutableStateOf(IntSize.Zero) }
 	var seekPreview by remember { mutableStateOf<Long?>(null) }
 	var seekStartMs by remember { mutableLongStateOf(0L) }
+	var casting by remember { mutableStateOf(false) }
+	val castState by com.patchouli.app.cast.CastService.state.collectAsState()
 	var brightness by remember {
 		val lp = activity.window.attributes.screenBrightness
 		mutableFloatStateOf(if (lp >= 0f) lp else runCatching { Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f }.getOrDefault(0.5f))
@@ -126,8 +131,8 @@ fun PlayerScreen(activity: PlayerActivity) {
 		val listener = MediaPlayer.EventListener { event ->
 			when (event.type) {
 				MediaPlayer.Event.Opening -> { buffering = true; error = false }
-				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed }
-				MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped -> isPlaying = false
+				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams() }
+				MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped -> { isPlaying = false; activity.updatePipParams() }
 				MediaPlayer.Event.Buffering -> buffering = event.buffering < 100f
 				MediaPlayer.Event.PositionChanged -> position = event.positionChanged
 				MediaPlayer.Event.TimeChanged -> timeMs = event.timeChanged
@@ -240,6 +245,9 @@ fun PlayerScreen(activity: PlayerActivity) {
 			},
 			modifier = Modifier.fillMaxSize(),
 		)
+		// the floating window shows the video and nothing else
+		if (activity.inPip) return@Box
+
 		// the gestures live on a layer above the video so the surface never eats them
 		Box(
 			Modifier.fillMaxSize().pointerInput(locked) {
@@ -297,12 +305,23 @@ fun PlayerScreen(activity: PlayerActivity) {
 				onSubtitles = { sheet = "spu" },
 				onAudio = { sheet = "audio" },
 				onMore = { sheet = "more" },
+				onCast = activity.currentFile?.let { { casting = true } },
 			)
 		}
+		// while the TV has the video, the phone is only its remote
+		if (castState != null) CastRemote(onBackToPhone = { player.play() })
+	}
+	if (casting) activity.currentFile?.let { file ->
+		CastSheet(path = file, title = activity.title, positionMs = player.time.coerceAtLeast(0), onDismiss = { casting = false }, onSent = { if (player.isPlaying) player.pause() })
 	}
 
+	if (activity.inPip) return
 	when (sheet) {
-		"spu" -> TrackSheet(title = subtitleLabel, tracks = player.spuTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.spuTrack, onSelect = { player.setSpuTrack(it); sheet = null }, onDismiss = { sheet = null })
+		"spu" -> TrackSheet(
+			title = subtitleLabel, tracks = player.spuTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.spuTrack,
+			onSelect = { player.setSpuTrack(it); sheet = null }, onDismiss = { sheet = null },
+			extra = stringResource(R.string.subtitles_load), onExtra = { activity.pickSubtitle(); sheet = null },
+		)
 		"audio" -> TrackSheet(title = audioLabel, tracks = player.audioTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.audioTrack, onSelect = { player.setAudioTrack(it); sheet = null }, onDismiss = { sheet = null })
 		"more" -> KitSheet(onDismiss = { sheet = null }, title = activity.title) {
 			KitListContainer {
@@ -335,7 +354,13 @@ fun PlayerScreen(activity: PlayerActivity) {
 						ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT -> "Portrait"
 						else -> "Auto"
 					},
+					showDivider = true,
 					onClick = { activity.cycleOrientation() },
+				)
+				KitListRow(
+					title = stringResource(R.string.pip_enter),
+					subtitle = stringResource(R.string.pip_summary),
+					onClick = { sheet = null; activity.enterPip() },
 				)
 			}
 		}
@@ -390,6 +415,7 @@ private fun Controls(
 	onSubtitles: () -> Unit,
 	onAudio: () -> Unit,
 	onMore: () -> Unit,
+	onCast: (() -> Unit)? = null,
 ) {
 	Column(Modifier.fillMaxSize()) {
 		// top: back, title, decoder, subtitles, audio, more
@@ -406,6 +432,7 @@ private fun Controls(
 				}
 			}
 			KitButton(onClick = { activity.toggleDecoder() }, label = stringResource(if (activity.hardware) R.string.decoder_hw else R.string.decoder_sw), size = KitButtonSize.Sm, container = Color.White.copy(alpha = 0.14f))
+			if (onCast != null) RoundButton(R.drawable.ic_cast, stringResource(R.string.cast_to_tv), onClick = onCast)
 			RoundButton(R.drawable.ic_subtitles, stringResource(R.string.subtitles), onClick = onSubtitles)
 			RoundButton(R.drawable.ic_audio, stringResource(R.string.audio_tracks), onClick = onAudio)
 			RoundButton(R.drawable.ic_more, stringResource(R.string.more), onClick = onMore)
@@ -450,9 +477,9 @@ private fun Controls(
 }
 
 @Composable
-private fun TrackSheet(title: String, tracks: List<Pair<Int, String>>, selected: Int, onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun TrackSheet(title: String, tracks: List<Pair<Int, String>>, selected: Int, onSelect: (Int) -> Unit, onDismiss: () -> Unit, extra: String? = null, onExtra: (() -> Unit)? = null) {
 	KitSheet(onDismiss = onDismiss, title = title) {
-		if (tracks.isEmpty()) {
+		if (tracks.isEmpty() && extra == null) {
 			KitText(stringResource(R.string.no_tracks), role = KitTextRole.Body, uppercase = false)
 		} else {
 			KitListContainer {
@@ -461,9 +488,11 @@ private fun TrackSheet(title: String, tracks: List<Pair<Int, String>>, selected:
 						title = if (id == -1) stringResource(R.string.track_disable) else name.ifBlank { stringResource(R.string.track_n, index) },
 						selected = id == selected,
 						onClick = { onSelect(id) },
-						showDivider = index < tracks.lastIndex,
+						showDivider = index < tracks.lastIndex || extra != null,
 					)
 				}
+				// a way to bring a file from anywhere on the phone (a .srt downloaded apart, say)
+				if (extra != null) KitListRow(title = extra, strong = true, onClick = onExtra)
 			}
 		}
 	}

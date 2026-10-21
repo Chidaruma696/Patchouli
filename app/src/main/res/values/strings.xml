@@ -87,6 +87,20 @@
 	<string name="err_cannot_play">This video could not be opened</string>
 	<string name="retry">Retry</string>
 	<string name="end_of_list">End of the folder</string>
+	<string name="pip">Picture in picture</string>
+	<string name="pip_summary">Keep playing in a small floating window when you leave the player</string>
+	<string name="pip_enter">Picture in picture</string>
+	<string name="subtitles_load">Load a subtitle file…</string>
+	<string name="search_library">Search the library</string>
+	<string name="search_empty">Nothing matches</string>
+	<string name="cast_to_tv">Send to TV</string>
+	<string name="cast_searching">Looking for TVs on the network…</string>
+	<string name="cast_none">No TV found. It has to be on the same Wi-Fi and accept DLNA (most do).</string>
+	<string name="cast_sending">Sending to %1$s</string>
+	<string name="cast_stop">Stop</string>
+	<string name="cast_failed">The TV did not take it: %1$s</string>
+	<string name="cast_no_network">No Wi-Fi address</string>
+	<string name="cast_back_to_phone">Back to the phone</string>
 
 	<!-- settings -->
 	<string name="appearance">Appearance</string>

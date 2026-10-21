@@ -23,6 +23,9 @@ object AppPrefs {
 	/** Seconds a double tap skips. */
 	var seekStepSec by mutableStateOf(10)
 		private set
+	/** Keep playing in a floating window when the user leaves the player. */
+	var pip by mutableStateOf(true)
+		private set
 	/** Ask AniList for covers and summaries of the folders. */
 	var coversOnline by mutableStateOf(true)
 		private set
@@ -44,6 +47,7 @@ object AppPrefs {
 		autoplayNext = p.getBoolean("autoplay_next", true)
 		hardwareDecoder = p.getBoolean("hw_decoder", true)
 		seekStepSec = p.getInt("seek_step", 10)
+		pip = p.getBoolean("pip", true)
 		coversOnline = p.getBoolean("covers_online", true)
 		kaoBannerVisible = p.getBoolean("kao_banner", true)
 	}
@@ -54,6 +58,7 @@ object AppPrefs {
 	fun updateAutoplayNext(value: Boolean) { autoplayNext = value; prefs().edit { putBoolean("autoplay_next", value) } }
 	fun updateHardwareDecoder(value: Boolean) { hardwareDecoder = value; prefs().edit { putBoolean("hw_decoder", value) } }
 	fun updateSeekStep(value: Int) { seekStepSec = value.coerceIn(5, 60); prefs().edit { putInt("seek_step", seekStepSec) } }
+	fun updatePip(value: Boolean) { pip = value; prefs().edit { putBoolean("pip", value) } }
 	fun updateCoversOnline(value: Boolean) { coversOnline = value; prefs().edit { putBoolean("covers_online", value) } }
 	fun updateKaoBanner(value: Boolean) { kaoBannerVisible = value; prefs().edit { putBoolean("kao_banner", value) } }
 	fun updateRootPath(value: String) {

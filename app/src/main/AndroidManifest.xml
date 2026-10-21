@@ -3,6 +3,10 @@
 	<!-- covers and metadata from AniList; nothing else leaves the phone -->
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<!-- sending a video to a TV: a foreground service serves the file over the Wi-Fi while the player is away -->
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 	<!-- the videos: MediaStore on 13+, the old storage permission before that -->
 	<uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -15,6 +19,7 @@
 		android:allowBackup="true"
 		android:appCategory="video"
 		android:requestLegacyExternalStorage="true"
+		android:usesCleartextTraffic="true"
 		android:icon="@mipmap/ic_launcher"
 		android:label="@string/app_name"
 		android:supportsRtl="true"
@@ -48,6 +53,12 @@
 				<data android:mimeType="video/*" />
 			</intent-filter>
 		</activity>
+
+		<!-- keeps a video going to a TV (DLNA) after the player closes; plain HTTP on the Wi-Fi, hence cleartext above -->
+		<service
+			android:name=".cast.CastService"
+			android:exported="false"
+			android:foregroundServiceType="mediaPlayback" />
 	</application>
 
 </manifest>

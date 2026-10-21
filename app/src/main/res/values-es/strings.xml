@@ -84,6 +84,20 @@
 	<string name="err_cannot_play">No se pudo abrir este vídeo</string>
 	<string name="retry">Reintentar</string>
 	<string name="end_of_list">Fin de la carpeta</string>
+	<string name="pip">Imagen en imagen</string>
+	<string name="pip_summary">Sigue reproduciendo en una ventana flotante cuando sales del reproductor</string>
+	<string name="pip_enter">Imagen en imagen</string>
+	<string name="subtitles_load">Cargar un archivo de subtítulos…</string>
+	<string name="search_library">Buscar en la biblioteca</string>
+	<string name="search_empty">Nada coincide</string>
+	<string name="cast_to_tv">Mandar a la tele</string>
+	<string name="cast_searching">Buscando teles en la red…</string>
+	<string name="cast_none">No hay ninguna tele. Tiene que estar en el mismo wifi y aceptar DLNA (casi todas).</string>
+	<string name="cast_sending">Mandando a %1$s</string>
+	<string name="cast_stop">Parar</string>
+	<string name="cast_failed">La tele no lo aceptó: %1$s</string>
+	<string name="cast_no_network">Sin dirección wifi</string>
+	<string name="cast_back_to_phone">Volver al teléfono</string>
 
 	<string name="appearance">Apariencia</string>
 	<string name="mode_system">Sistema</string>

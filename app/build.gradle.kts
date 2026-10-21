@@ -103,4 +103,6 @@ dependencies {
 	// frames of the local files as thumbnails
 	implementation(libs.coil.video)
 	implementation(libs.libvlc)
+	// the tiny HTTP server a TV fetches the video from when it is sent over DLNA
+	implementation(libs.nanohttpd)
 }

@@ -11,6 +11,7 @@ lifecycle = "2.10.0"
 composeBom = "2026.03.00"
 coil = "3.3.0"
 libvlc = "3.6.2"
+nanohttpd = "2.3.1"
 
 [libraries]
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -31,6 +32,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-network = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 coil-video = { module = "io.coil-kt.coil3:coil-video", version.ref = "coil" }
 libvlc = { module = "org.videolan.android:libvlc-all", version.ref = "libvlc" }
+nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanohttpd" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

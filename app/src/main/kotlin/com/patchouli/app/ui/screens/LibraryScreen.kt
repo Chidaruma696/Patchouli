@@ -61,6 +61,7 @@ import com.patchouli.app.ui.kit.KitSectionHead
 import com.patchouli.app.ui.kit.KitSurface
 import com.patchouli.app.ui.kit.KitSurfaceElevation
 import com.patchouli.app.ui.kit.KitText
+import com.patchouli.app.ui.kit.KitTextField
 import com.patchouli.app.ui.kit.KitTextRole
 import com.patchouli.app.ui.kit.LocalPersonality
 import com.patchouli.app.ui.kit.kitShape
@@ -74,6 +75,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 	val shelves = Library.shelves
 	val continuing = Progress.continueWatching()
 	var menuFor by remember { mutableStateOf<Folder?>(null) }
+	var query by remember { mutableStateOf("") }
 	menuFor?.let { FolderMenu(it, onDismiss = { menuFor = null }) }
 	if (Library.loading && Library.root == null) {
 		Box(Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
@@ -97,6 +99,31 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 	) {
 		if (AppPrefs.kaoBannerVisible) {
 			item(span = { GridItemSpan(2) }) { KeepAndroidOpenBanner() }
+		}
+		// the search box: while something is typed, the shelves give way to what matches
+		if (Library.root != null && (shelves.isNotEmpty() || query.isNotEmpty())) {
+			item(span = { GridItemSpan(2) }) {
+				KitTextField(value = query, onValueChange = { query = it }, placeholder = stringResource(R.string.search_library), modifier = Modifier.fillMaxWidth())
+			}
+		}
+		if (query.isNotBlank()) {
+			val (folders, videos) = Library.search(query)
+			if (folders.isEmpty() && videos.isEmpty()) {
+				item(span = { GridItemSpan(2) }) { KitText(stringResource(R.string.search_empty), role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false, modifier = Modifier.padding(top = 16.dp)) }
+			}
+			if (folders.isNotEmpty()) {
+				item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
+				items(folders, key = { "s:" + it.path }) { folder -> FolderCard(folder, onClick = { onOpenFolder(folder) }, onLongClick = { menuFor = folder }) }
+			}
+			if (videos.isNotEmpty()) {
+				item(span = { GridItemSpan(2) }) { KitSectionHead(label = stringResource(R.string.videos), kicker = "話") }
+				item(span = { GridItemSpan(2) }) {
+					KitListContainer {
+						videos.forEachIndexed { index, video -> VideoRow(video, showDivider = index < videos.lastIndex, onClick = { onPlay(video) }) }
+					}
+				}
+			}
+			return@LazyVerticalGrid
 		}
 		if (continuing.isNotEmpty()) {
 			item(span = { GridItemSpan(2) }) {

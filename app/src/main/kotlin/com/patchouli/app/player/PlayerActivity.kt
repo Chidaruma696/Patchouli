@@ -1,15 +1,26 @@
 package com.patchouli.app.player
 
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import android.util.Rational
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,6 +28,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.patchouli.app.BuildConfig
+import com.patchouli.app.R
 import com.patchouli.app.library.Mark
 import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
@@ -25,10 +37,14 @@ import com.patchouli.app.ui.kit.PatchouliTheme
 import org.videolan.libvlc.LibVLC
 import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
+import org.videolan.libvlc.interfaces.IMedia
+import java.io.File
 
 /**
  * libVLC-backed player of local files. Gets a playlist (the videos of a folder, in order) and an
- * index, or a single uri when another app hands us a video. Remembers where each file was left.
+ * index, or a single uri when another app hands us a video. Remembers where each file was left,
+ * picks up subtitle files lying next to the video, and keeps playing in a small window when the
+ * user leaves (picture in picture).
  */
 class PlayerActivity : ComponentActivity() {
 
@@ -48,11 +64,33 @@ class PlayerActivity : ComponentActivity() {
 		private set
 	var orientation by mutableStateOf(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
 		private set
+	/** True while the activity is the small floating window: no controls, no gestures. */
+	var inPip by mutableStateOf(false)
+		private set
+	/** Subtitle files found next to the current video, in the order they were added. */
+	var subtitleFiles by mutableStateOf<List<File>>(emptyList())
+		private set
+
+	/** The file on disk being played, or null when another app handed us a content uri (a TV cannot fetch that). */
+	val currentFile: String? get() = currentPath
 
 	val count: Int get() = playlist.size
 	val hasPrevious: Boolean get() = index > 0
 	val hasNext: Boolean get() = index < playlist.lastIndex
 	private val currentPath: String? get() = playlist.getOrNull(index)
+
+	private val pickSubtitleLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+		if (uri != null) addSubtitleFrom(uri)
+	}
+
+	/** The play/pause button on the floating window talks back through this. */
+	private val pipReceiver = object : BroadcastReceiver() {
+		override fun onReceive(context: Context, intent: Intent) {
+			if (intent.action != ACTION_PIP) return
+			if (player.isPlaying) player.pause() else player.play()
+			updatePipParams()
+		}
+	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -83,6 +121,9 @@ class PlayerActivity : ComponentActivity() {
 		player = MediaPlayer(libVlc)
 		load(index, autoplay = false, fromMs = null)
 
+		val filter = IntentFilter(ACTION_PIP)
+		if (Build.VERSION.SDK_INT >= 33) registerReceiver(pipReceiver, filter, RECEIVER_NOT_EXPORTED) else registerReceiver(pipReceiver, filter)
+
 		setContent {
 			PatchouliTheme { PlayerScreen(this) }
 		}
@@ -108,8 +149,89 @@ class PlayerActivity : ComponentActivity() {
 		player.media = media
 		media.release()
 		title = path?.let { Names.title(it.substringAfterLast('/')) } ?: contentUri?.lastPathSegment?.let { Names.title(it) }.orEmpty()
-		Log.i(TAG, "play ${path ?: contentUri} hw=$hardware from=$start")
+		subtitleFiles = path?.let { attachSubtitles(File(it)) }.orEmpty()
+		Log.i(TAG, "play ${path ?: contentUri} hw=$hardware from=$start subs=${subtitleFiles.size}")
 		if (autoplay) player.play()
+	}
+
+	// --- subtitles ---
+
+	/**
+	 * Subtitle files lying next to the video: the same name with .srt/.ass/.ssa/.vtt/.sub, or any
+	 * such file whose name starts with the video's. The first one is switched on.
+	 */
+	private fun attachSubtitles(video: File): List<File> {
+		val base = video.nameWithoutExtension
+		val found = runCatching {
+			video.parentFile?.listFiles { f -> f.isFile && f.extension.lowercase() in SUBTITLE_EXTENSIONS && f.nameWithoutExtension.startsWith(base, ignoreCase = true) }
+		}.getOrNull().orEmpty().sortedWith(compareBy({ it.nameWithoutExtension.length }, { it.name }))
+		found.forEachIndexed { n, f -> player.addSlave(IMedia.Slave.Type.Subtitle, Uri.fromFile(f), n == 0) }
+		return found
+	}
+
+	/** Opens the system picker for a subtitle file anywhere on the phone. */
+	fun pickSubtitle() {
+		runCatching { pickSubtitleLauncher.launch(arrayOf("*/*")) }.onFailure { Log.w(TAG, "subtitle picker", it) }
+	}
+
+	/** A picked document is copied into the cache (libVLC wants a path) and switched on. */
+	private fun addSubtitleFrom(uri: Uri) {
+		runCatching {
+			val name = contentResolver.query(uri, null, null, null, null)?.use { c ->
+				val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+				if (c.moveToFirst() && i >= 0) c.getString(i) else null
+			} ?: "subtitle.srt"
+			val dir = File(cacheDir, "subs").apply { mkdirs() }
+			val copy = File(dir, name)
+			contentResolver.openInputStream(uri)!!.use { input -> copy.outputStream().use { input.copyTo(it) } }
+			player.addSlave(IMedia.Slave.Type.Subtitle, Uri.fromFile(copy), true)
+			subtitleFiles = subtitleFiles + copy
+		}.onFailure { Log.w(TAG, "subtitle from $uri", it) }
+	}
+
+	// --- picture in picture ---
+
+	private val pipSupported: Boolean
+		get() = Build.VERSION.SDK_INT >= 26 && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+	private fun pipParams(): PictureInPictureParams {
+		val track = runCatching { player.currentVideoTrack }.getOrNull()
+		val ratio = if (track != null && track.width > 0 && track.height > 0) Rational(track.width, track.height) else Rational(16, 9)
+		// the system refuses anything wider than 2.39:1 or taller than 1:2.39
+		val safe = if (ratio.toFloat() > 2.39f) Rational(239, 100) else if (ratio.toFloat() < 1 / 2.39f) Rational(100, 239) else ratio
+		val playing = runCatching { player.isPlaying }.getOrDefault(false)
+		val toggle = RemoteAction(
+			Icon.createWithResource(this, if (playing) R.drawable.ic_pause else R.drawable.ic_play),
+			getString(if (playing) R.string.pause else R.string.play),
+			getString(if (playing) R.string.pause else R.string.play),
+			PendingIntent.getBroadcast(this, 1, Intent(ACTION_PIP).setPackage(packageName), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE),
+		)
+		return PictureInPictureParams.Builder().setAspectRatio(safe).setActions(listOf(toggle)).apply {
+			if (Build.VERSION.SDK_INT >= 31) setAutoEnterEnabled(AppPrefs.pip && playing)
+		}.build()
+	}
+
+	/** Keeps the system's copy of the params current (the button, the auto-enter flag). */
+	fun updatePipParams() {
+		if (!pipSupported) return
+		runCatching { setPictureInPictureParams(pipParams()) }.onFailure { Log.w(TAG, "pip params", it) }
+	}
+
+	/** Shrinks into the floating window now. */
+	fun enterPip() {
+		if (!pipSupported) return
+		runCatching { enterPictureInPictureMode(pipParams()) }.onFailure { Log.w(TAG, "pip", it) }
+	}
+
+	override fun onUserLeaveHint() {
+		super.onUserLeaveHint()
+		// before 12 the system does not enter on its own; home or recents while playing shrinks us
+		if (Build.VERSION.SDK_INT < 31 && AppPrefs.pip && !inPip && ::player.isInitialized && player.isPlaying) enterPip()
+	}
+
+	override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+		super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+		inPip = isInPictureInPictureMode
 	}
 
 	fun next() { if (hasNext) load(index + 1, autoplay = true, fromMs = null) }
@@ -147,11 +269,19 @@ class PlayerActivity : ComponentActivity() {
 	override fun onPause() {
 		super.onPause()
 		saveProgress()
-		if (::player.isInitialized && player.isPlaying) player.pause()
+		// the floating window is "paused" to Android but must keep playing
+		if (!inPip && ::player.isInitialized && player.isPlaying) player.pause()
+	}
+
+	override fun onStop() {
+		super.onStop()
+		// the floating window was swiped away: we are done
+		if (inPip) finish()
 	}
 
 	override fun onDestroy() {
 		super.onDestroy()
+		runCatching { unregisterReceiver(pipReceiver) }
 		if (::player.isInitialized) {
 			saveProgress()
 			player.stop()
@@ -166,6 +296,8 @@ class PlayerActivity : ComponentActivity() {
 		private const val TAG = "Player"
 		private const val EXTRA_PLAYLIST = "playlist"
 		private const val EXTRA_INDEX = "index"
+		private const val ACTION_PIP = "com.patchouli.app.PIP_TOGGLE"
+		private val SUBTITLE_EXTENSIONS = setOf("srt", "ass", "ssa", "vtt", "sub")
 
 		fun intent(context: Context, playlist: List<String>, index: Int): Intent =
 			Intent(context, PlayerActivity::class.java)

@@ -92,6 +92,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 					)
 				},
 			)
+			KitListRow(
+				title = stringResource(R.string.pip),
+				subtitle = stringResource(R.string.pip_summary),
+				onClick = { AppPrefs.updatePip(!AppPrefs.pip) },
+				showDivider = true,
+				trailing = { KitCheckbox(checked = AppPrefs.pip, onCheckedChange = { AppPrefs.updatePip(it) }) },
+			)
 			KitListRow(title = stringResource(R.string.seek_step), subtitle = stringResource(R.string.seek_step_summary))
 			KitSegmented(
 				selected = AppPrefs.seekStepSec,

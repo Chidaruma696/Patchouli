@@ -72,6 +72,23 @@ object Library {
 		return if (primary.isDirectory) primary else java.io.File("/storage", folder.path)
 	}
 
+	/** Folders and videos under the library whose name contains [query], folders first, each list in natural order. */
+	fun search(query: String): Pair<List<Folder>, List<Video>> {
+		val q = query.trim()
+		if (q.isEmpty()) return emptyList<Folder>() to emptyList()
+		val folders = ArrayList<Folder>()
+		val videos = ArrayList<Video>()
+		fun walk(f: Folder) {
+			f.folders.forEach { child ->
+				if (Names.series(child.name).contains(q, ignoreCase = true)) folders += child
+				walk(child)
+			}
+			f.videos.forEach { v -> if (v.title.contains(q, ignoreCase = true)) videos += v }
+		}
+		home?.let(::walk)
+		return folders.sortedWith { a, b -> Names.natural.compare(a.name, b.name) } to videos.sortedWith(compareBy<Video> { it.folderPath }.thenBy { it.episode ?: Int.MAX_VALUE }).take(80)
+	}
+
 	/** The videos of the same folder, in order: what plays after this one. */
 	fun siblingsOf(video: Video): List<Video> = find(video.folderPath)?.sortedVideos()?.takeIf { it.isNotEmpty() } ?: listOf(video)
 
