@@ -17,6 +17,12 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.security.MessageDigest
 
+/** The application context for the one caller without one of its own. */
+internal object PatchouliAppContext {
+	lateinit var app: Context
+	fun filesDir(): File = app.filesDir
+}
+
 /** What we asked AniList about a folder and what it said; [manual] when the user answered instead. */
 @Serializable
 data class Lookup(
@@ -53,6 +59,7 @@ object Metadata {
 	)
 
 	fun init(context: Context) {
+		PatchouliAppContext.app = context.applicationContext
 		dir = File(context.filesDir, "anilist").also { it.mkdirs() }
 		dir.listFiles { f -> f.extension == "json" }?.forEach { file ->
 			runCatching { json.decodeFromString<Stored>(file.readText()) }
@@ -191,6 +198,26 @@ object Metadata {
 		val current = cache[folder.path]
 		store(folder.path, Lookup(current?.query ?: Names.series(folder.name), current?.anime, System.currentTimeMillis(), manual = current?.manual == true, customCover = target.absolutePath))
 		return true
+	}
+
+	/** An image found on the web: downloaded into our files; false when it is not an image after all. */
+	suspend fun setCustomCoverFromUrl(folder: Folder, url: String, referer: String?): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
+		val target = File(File(PatchouliAppContext.filesDir(), "covers").also { it.mkdirs() }, fileFor(folder.path).nameWithoutExtension + ".jpg")
+		val ok = runCatching {
+			val request = okhttp3.Request.Builder().url(url)
+				.header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36")
+				.apply { if (referer != null) header("Referer", referer) }
+				.build()
+			okhttp3.OkHttpClient().newCall(request).execute().use { r ->
+				if (r.code != 200) error("HTTP ${r.code}")
+				target.outputStream().use { r.body.byteStream().copyTo(it) }
+			}
+			android.graphics.BitmapFactory.decodeFile(target.absolutePath) ?: error("not an image")
+		}.isSuccess
+		if (!ok) { target.delete(); return@withContext false }
+		val current = cache[folder.path]
+		store(folder.path, Lookup(current?.query ?: Names.series(folder.name), current?.anime, System.currentTimeMillis(), manual = current?.manual == true, customCover = target.absolutePath))
+		true
 	}
 
 	fun clearCustomCover(folder: Folder) {
