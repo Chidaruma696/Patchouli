@@ -75,6 +75,7 @@ object Metadata {
 	/** Forgets the failures and asks again for every folder given. */
 	fun retry(folders: List<Folder>) {
 		synchronized(inflight) { failures.clear() }
+		synchronized(down) { down.clear() }
 		errors.clear()
 		folders.forEach { ensure(it) }
 	}
@@ -101,14 +102,13 @@ object Metadata {
 		val query = Names.series(folder.name)
 		scope.launch {
 			try {
-				val hit = try {
-					AniList.search(query).firstOrNull()
-				} catch (e: Exception) {
-					// AniList goes down now and then; MyAnimeList through Jikan knows the same shows
-					Log.w(TAG, "AniList failed for '$query' (${e.message}), asking Jikan")
-					Jikan.search(query).firstOrNull()
-				}
-				store(folder.path, Lookup(query, hit, System.currentTimeMillis()))
+				// AniList first; it goes down now and then, and so does Jikan, so three catalogues in a row.
+				// One that just failed is skipped for a while: Jikan's timeout alone is fifteen seconds.
+				val hit = ask("anilist", query) { AniList.search(it) }
+					?: ask("jikan", query) { Jikan.search(it) }
+					?: ask("kitsu", query) { Kitsu.search(it) }
+					?: throw lastError ?: IllegalStateException("no catalogue answered")
+				store(folder.path, Lookup(query, hit.takeIf { it.id != 0 }, System.currentTimeMillis()))
 				synchronized(inflight) { errors.remove(folder.path) }
 			} catch (e: Exception) {
 				// the network is not there: leave it unanswered, the next visit asks again
@@ -118,6 +118,24 @@ object Metadata {
 			} finally {
 				synchronized(inflight) { inflight.remove(folder.path) }
 			}
+		}
+	}
+
+	private val down = HashMap<String, Long>()
+	private const val DOWN_FOR_MS = 5 * 60_000L
+	@Volatile private var lastError: Exception? = null
+
+	/** One catalogue's answer, or null when it is down (remembered five minutes) or it failed. */
+	private suspend fun ask(name: String, query: String, search: suspend (String) -> List<Anime>): Anime? {
+		synchronized(down) { down[name]?.let { if (System.currentTimeMillis() - it < DOWN_FOR_MS) return null else down.remove(name) } }
+		return try {
+			// an empty answer is an answer: the catalogue does not know the name
+			search(query).firstOrNull() ?: Anime(id = 0, source = name, title = "")
+		} catch (e: Exception) {
+			Log.w(TAG, "$name failed for '$query': ${e.message}")
+			lastError = e
+			synchronized(down) { down[name] = System.currentTimeMillis() }
+			null
 		}
 	}
 
