@@ -135,9 +135,7 @@ private fun App() {
 				title = stringResource(R.string.app_name),
 				titleAccent = "chouli",
 				subtitle = stringResource(if (tab == TAB_LIBRARY) R.string.library_kicker else R.string.settings),
-				actions = {
-					if (tab == TAB_LIBRARY) KitIconButton(ImageVector.vectorResource(R.drawable.ic_refresh), stringResource(R.string.rescan), onClick = rescan)
-				},
+				art = painterResource(R.drawable.patchouli),
 			)
 		},
 		bottomBar = {
@@ -163,12 +161,11 @@ private fun App() {
 private fun RootScreen() {
 	val colors = LocalPersonality.current.colors
 	val pick = rememberRootPicker()
-	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli") }) { padding ->
+	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli", art = painterResource(R.drawable.patchouli)) }) { padding ->
 		Column(
 			modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
 			verticalArrangement = Arrangement.spacedBy(14.dp),
 		) {
-			Image(painterResource(R.drawable.patchouli), contentDescription = null, modifier = Modifier.height(160.dp))
 			KitText(stringResource(R.string.root_title), role = KitTextRole.Display)
 			KitText(stringResource(R.string.root_text), role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false)
 			KitButton(onClick = pick, label = stringResource(R.string.root_choose), emphasized = true)
@@ -181,7 +178,7 @@ private fun RootScreen() {
 private fun PermissionScreen(onAsk: () -> Unit) {
 	val context = LocalContext.current
 	val colors = LocalPersonality.current.colors
-	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli") }) { padding ->
+	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli", art = painterResource(R.drawable.patchouli)) }) { padding ->
 		Column(
 			modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
 			verticalArrangement = Arrangement.spacedBy(14.dp),

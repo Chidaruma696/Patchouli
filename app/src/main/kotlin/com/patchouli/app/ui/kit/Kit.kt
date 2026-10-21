@@ -8,6 +8,7 @@ package com.patchouli.app.ui.kit
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,7 +58,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
@@ -590,6 +593,7 @@ private fun accentTitle(title: String, accentSub: String?, accent: Color): Annot
 	}
 }
 
+/** [art] is a figure that stands at the end of the bar, behind the title: the mascot of the app. */
 @Composable
 fun KitTopBar(
 	title: String,
@@ -598,28 +602,38 @@ fun KitTopBar(
 	subtitle: String? = null,
 	leading: (@Composable () -> Unit)? = null,
 	actions: (@Composable RowScope.() -> Unit)? = null,
+	art: Painter? = null,
 ) {
 	val personality = LocalPersonality.current
 	val colors = personality.colors
 	val annotatedTitle = remember(title, titleAccent, colors.primary) { accentTitle(title, titleAccent, colors.primary) }
-	Row(
+	Box(
 		modifier = modifier
 			.fillMaxWidth()
 			.background(colors.background)
 			.screentoneCorner(colors.primary, colors.screentoneOpacity, boost = 1.4f, regionWidth = 150.dp, regionHeight = 80.dp)
-			.statusBarsPadding()
-			.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
-		verticalAlignment = Alignment.CenterVertically,
-		horizontalArrangement = Arrangement.spacedBy(12.dp),
+			.statusBarsPadding(),
 	) {
-		leading?.invoke()
-		Column(modifier = Modifier.weight(1f)) {
-			Text(text = annotatedTitle, style = personality.type.display.copy(fontSize = 26.sp, lineHeight = 30.sp), color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-			subtitle?.let {
-				KitText(text = it, modifier = Modifier.padding(top = 1.dp), role = KitTextRole.Label, color = colors.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-			}
+		if (art != null) {
+			Image(
+				painter = art, contentDescription = null, contentScale = ContentScale.Fit,
+				modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp).height(84.dp),
+			)
 		}
-		actions?.let { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), content = it) }
+		Row(
+			modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
+			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.spacedBy(12.dp),
+		) {
+			leading?.invoke()
+			Column(modifier = Modifier.weight(1f)) {
+				Text(text = annotatedTitle, style = personality.type.display.copy(fontSize = 26.sp, lineHeight = 30.sp), color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+				subtitle?.let {
+					KitText(text = it, modifier = Modifier.padding(top = 1.dp), role = KitTextRole.Label, color = colors.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+				}
+			}
+			actions?.let { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), content = it) }
+		}
 	}
 }
 

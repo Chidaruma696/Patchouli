@@ -129,8 +129,8 @@
 	<!-- credits -->
 	<string name="credit_art">Patchouli</string>
 	<string name="credit_art_summary">Chibi by Fantastiic (DeviantArt), CC BY-NC 3.0</string>
-	<string name="credit_design">Design</string>
-	<string name="credit_design_summary">Component structure from Komi Store (Apache 2.0); the look and the palettes are Patchouli\'s</string>
+	<string name="credit_design">UI components</string>
+	<string name="credit_design_summary">The kit\'s code descends from Komi Store\'s (Apache 2.0); the look and the palettes are Patchouli\'s</string>
 	<string name="credit_player">Player</string>
 	<string name="credit_player_summary">libVLC by VideoLAN, LGPL 2.1, used as an unmodified library</string>
 	<string name="credit_catalog">Catalogue</string>

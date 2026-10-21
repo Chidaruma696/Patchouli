@@ -123,8 +123,8 @@
 
 	<string name="credit_art">Patchouli</string>
 	<string name="credit_art_summary">Chibi de Fantastiic (DeviantArt), CC BY-NC 3.0</string>
-	<string name="credit_design">Diseño</string>
-	<string name="credit_design_summary">Estructura de los componentes de Komi Store (Apache 2.0); el aspecto y las paletas son de Patchouli</string>
+	<string name="credit_design">Componentes de interfaz</string>
+	<string name="credit_design_summary">El código del kit desciende del de Komi Store (Apache 2.0); el aspecto y las paletas son de Patchouli</string>
 	<string name="credit_player">Reproductor</string>
 	<string name="credit_player_summary">libVLC de VideoLAN, LGPL 2.1, usada como biblioteca sin modificar</string>
 	<string name="credit_catalog">Catálogo</string>
