@@ -614,21 +614,16 @@ fun KitTopBar(
 			.screentoneCorner(colors.primary, colors.screentoneOpacity, boost = 1.4f, regionWidth = 150.dp, regionHeight = 80.dp)
 			.statusBarsPadding(),
 	) {
-		if (art != null) {
-			// matchParentSize: the figure takes the bar's height, never the other way round
-			Box(Modifier.matchParentSize()) {
-				Image(
-					painter = art, contentDescription = null, contentScale = ContentScale.Fit,
-					modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 4.dp).height(56.dp),
-				)
-			}
-		}
 		Row(
-			modifier = Modifier.fillMaxWidth().padding(start = if (art != null && leading == null) 40.dp else 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
+			modifier = Modifier.fillMaxWidth().padding(start = if (art != null) 10.dp else 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
 			verticalAlignment = Alignment.CenterVertically,
-			horizontalArrangement = Arrangement.spacedBy(12.dp),
+			horizontalArrangement = Arrangement.spacedBy(10.dp),
 		) {
 			leading?.invoke()
+			if (art != null) {
+				// the mascot stands at the left of the title, as its own thing
+				Image(painter = art, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.height(52.dp))
+			}
 			Column(modifier = Modifier.weight(1f)) {
 				Text(text = annotatedTitle, style = personality.type.display.copy(fontSize = 26.sp, lineHeight = 30.sp), color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
 				subtitle?.let {
