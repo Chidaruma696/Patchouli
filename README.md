@@ -54,7 +54,7 @@ Grab the APK from the [latest release](https://github.com/Chidaruma696/Patchouli
 
 ## 🎨 Look
 
-The interface is a port of [Komi Store](https://github.com/komi-store/komi-store)'s design system with its own skin: a serif for the headings, modest corners, no pattern behind the page. Twelve palettes named after Touhou Project characters, each in light and dark; Patchouli's is the default.
+The interface is Patchouli's own kit: paper and ink, a serif for the headings, modest corners, no pattern behind the page. Twelve palettes named after Touhou Project characters, each in light and dark; Patchouli's is the default.
 
 <br/>
 

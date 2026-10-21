@@ -1,7 +1,5 @@
 /*
- * Styles, palettes and theme. The kit's structure comes from Komi Store's design system
- * (https://github.com/komi-store/komi-store, Copyright kurikomi-labs and contributors, Apache License
- * 2.0); the look is our own. Palettes: one per Touhou Project character, light and dark.
+ * Styles, palettes and theme of the kit. Palettes: one per Touhou Project character, light and dark.
  */
 package com.patchouli.app.ui.kit
 

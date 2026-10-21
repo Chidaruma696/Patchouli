@@ -28,7 +28,6 @@ This image is **not** under the Apache license of the rest of the project: it ma
 
 | Component | Use in Patchouli | License |
 | --- | --- | --- |
-| [Komi Store](https://github.com/komi-store/komi-store) (kurikomi-labs) | Structure and API of the UI kit (`app/src/main/kotlin/com/patchouli/app/ui/kit`); the look (shapes, shadows, palettes) is Patchouli's own | Apache 2.0 |
 | [Lora](https://github.com/cyrealtype/Lora-Cyrillic) (Cyreal) | Headings | SIL Open Font License 1.1 |
 | [Noto Sans](https://fonts.google.com/noto) (Google) | Body text and labels | SIL Open Font License 1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (JetBrains) | Times and monospaced text | SIL Open Font License 1.1 |

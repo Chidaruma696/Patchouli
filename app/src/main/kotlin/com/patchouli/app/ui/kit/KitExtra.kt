@@ -1,6 +1,5 @@
 /*
- * Structure and API adapted from Komi Store (komi-store/komi-store), Apache License 2.0; the look is ours:
- * KitSegmented, KitList (container + row), KitSheet (bottom placement), KitDialog,
+ * More of the kit: KitSegmented, KitList (container + row), KitSheet (bottom placement), KitDialog,
  * KitProgress, KitFab and the settings section head.
  */
 package com.patchouli.app.ui.kit

@@ -1,6 +1,5 @@
 /*
- * Drawings of the kit: the check motif, rounded focus rings and a soft press. The kit's structure
- * comes from Komi Store (kurikomi-labs/komi-store), Apache License 2.0; these drawings are our own.
+ * Drawings of the kit: the check motif, rounded focus rings and a soft press.
  */
 package com.patchouli.app.ui.kit
 

@@ -1,8 +1,7 @@
 /*
  * Components of the kit: KitText, KitHeadline, KitSurface, KitButton, KitIconButton, KitChip,
  * KitBadge, KitCheckbox, KitTextField, KitHorizontalDivider, KitTopBar, KitBottomBar, KitScaffold.
- * Their structure and API come from Komi Store (kurikomi-labs/komi-store), Apache License 2.0; the
- * look (rounded shapes, soft shadows, the check motif) is our own and comes from the app's style.
+ * Patchouli's own: paper and ink, modest corners, flat shadows, the check mark as the only ornament.
  */
 package com.patchouli.app.ui.kit
 
