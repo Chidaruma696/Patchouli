@@ -593,7 +593,7 @@ private fun accentTitle(title: String, accentSub: String?, accent: Color): Annot
 	}
 }
 
-/** [art] is a figure that stands at the end of the bar, behind the title: the mascot of the app. */
+/** [art] is a figure that stands at the start of the bar, behind the title: the mascot of the app. */
 @Composable
 fun KitTopBar(
 	title: String,
@@ -617,7 +617,7 @@ fun KitTopBar(
 		if (art != null) {
 			Image(
 				painter = art, contentDescription = null, contentScale = ContentScale.Fit,
-				modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp).height(84.dp),
+				modifier = Modifier.align(Alignment.BottomStart).padding(start = 6.dp).height(84.dp),
 			)
 		}
 		Row(
