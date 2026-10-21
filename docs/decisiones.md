@@ -12,4 +12,8 @@ Quería algo como MX Player para ver lo que baja Seija, sin anuncios y con los g
 - **Progreso por archivo** en SharedPreferences: «seguir viendo» en la biblioteca, seguir donde se quedó y pasar al siguiente episodio al terminar.
 - **Gestos en un solo detector** (`PlayerGestures.kt`) en vez de combinar `detectTapGestures` + `detectDragGestures` + `transformable`, porque se pelean entre sí: toque, doble toque por tercios, mantener para 2×, arrastre vertical por mitad, horizontal para buscar y pellizco para zoom.
 
+**La mascota es CC BY-NC.** No hay dibujos de Patchouli con licencia libre del todo (en Commons solo hay fotos de cosplay); la chibi de Fantastiic en DeviantArt es CC BY-NC 3.0, que basta para una app que no se vende. Va con su crédito en README, avisos y Acerca de, separada de la Apache del código.
+
+**Buscar carátulas en la web es un navegador, no una API.** El endpoint interno de imágenes de DuckDuckGo (`i.js`) responde con un desafío anti-bot a cualquier cliente que no sea su web, así que se abre la búsqueda en un WebView y un script captura el toque sobre la imagen; la miniatura del proxy de DuckDuckGo lleva la URL original en `?u=`, que es la que se baja.
+
 Pendiente: picture in picture, que Seija deje un `seija.json` con el ID de AniList en cada carpeta para no buscar por nombre, y subtítulos externos (.srt al lado del vídeo; libVLC los carga con `addSlave`).

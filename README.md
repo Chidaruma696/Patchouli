@@ -1,6 +1,6 @@
 [English](README.md) · [Español](README.es.md)
 
-<p align="center"><img src="docs/icon.png" width="96" alt=""></p>
+<p align="center"><img src="docs/patchouli.png" width="180" alt="Patchouli Knowledge, chibi, holding a book"></p>
 
 <h1 align="center">Patchouli <sub>パチュリー</sub></h1>
 
@@ -96,6 +96,8 @@ JDK 17+, Android SDK 36. Release signing reads `keystore.*` from `local.properti
 ## ⚖️ Legal
 
 Apache License 2.0; see [LICENSE](LICENSE). Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). libVLC is used as an unmodified dynamic library under the LGPL 2.1.
+
+The chibi Patchouli above and in the app is ["Chibi Patchouli Knownledge (Touhou)"](https://www.deviantart.com/fantastiic/art/Chibi-Patchouli-Knownledge-Touhou-305044472) by **Fantastiic**, [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/), with the artist's watermark cropped out. It is not covered by the Apache license: credit the artist and keep it out of anything commercial.
 
 Patchouli plays files that are already on your device. It does not download, stream or share anything.
 

@@ -36,6 +36,7 @@ private const val NOTICES_URL = "$REPO_URL/blob/main/THIRD_PARTY_NOTICES.md"
 private const val KOMI_URL = "https://github.com/komi-store/komi-store"
 private const val LIBVLC_URL = "https://code.videolan.org/videolan/vlc-android"
 private const val ANILIST_URL = "https://anilist.co"
+private const val ART_URL = "https://www.deviantart.com/fantastiic/art/Chibi-Patchouli-Knownledge-Touhou-305044472"
 
 fun Context.openUrl(url: String) {
 	runCatching { startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -89,6 +90,7 @@ fun AboutSection() {
 			)
 		}
 		KitListContainer {
+			KitListRow(title = stringResource(R.string.credit_art), subtitle = stringResource(R.string.credit_art_summary), onClick = { context.openUrl(ART_URL) }, showDivider = true)
 			KitListRow(title = stringResource(R.string.credit_design), subtitle = stringResource(R.string.credit_design_summary), onClick = { context.openUrl(KOMI_URL) }, showDivider = true)
 			KitListRow(title = stringResource(R.string.credit_player), subtitle = stringResource(R.string.credit_player_summary), onClick = { context.openUrl(LIBVLC_URL) }, showDivider = true)
 			KitListRow(title = stringResource(R.string.credit_catalog), subtitle = stringResource(R.string.credit_catalog_summary), onClick = { context.openUrl(ANILIST_URL) }, showDivider = true)

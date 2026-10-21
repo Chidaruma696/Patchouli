@@ -12,10 +12,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -165,6 +168,7 @@ private fun RootScreen() {
 			modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
 			verticalArrangement = Arrangement.spacedBy(14.dp),
 		) {
+			Image(painterResource(R.drawable.patchouli), contentDescription = null, modifier = Modifier.height(160.dp))
 			KitText(stringResource(R.string.root_title), role = KitTextRole.Display)
 			KitText(stringResource(R.string.root_text), role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false)
 			KitButton(onClick = pick, label = stringResource(R.string.root_choose), emphasized = true)

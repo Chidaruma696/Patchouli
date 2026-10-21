@@ -16,6 +16,14 @@ Under the LGPL 2.1, libVLC is used as a dynamic library without modifications. I
 | --- | --- | --- |
 | [AniList](https://anilist.co) GraphQL API | Covers, titles and summaries for the folders, looked up by name | [AniList terms](https://anilist.co/terms) |
 
+## Art
+
+| Component | Use in Patchouli | License |
+| --- | --- | --- |
+| ["Chibi Patchouli Knownledge (Touhou)"](https://www.deviantart.com/fantastiic/art/Chibi-Patchouli-Knownledge-Touhou-305044472) by Fantastiic | The mascot in the README and in the app's empty screens (`docs/patchouli.png`, `app/src/main/res/drawable-nodpi/patchouli.png`); the artist's watermark in the corner was cropped out | [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/) |
+
+This image is **not** under the Apache license of the rest of the project: it may be shared and adapted with credit to the artist, for non-commercial purposes only.
+
 ## Design
 
 | Component | Use in Patchouli | License |
@@ -40,5 +48,6 @@ The colour palettes are Patchouli's own. Their names are characters of Touhou Pr
 ## License texts
 
 - Apache License 2.0: <https://www.apache.org/licenses/LICENSE-2.0>
+- Creative Commons Attribution-NonCommercial 3.0: <https://creativecommons.org/licenses/by-nc/3.0/legalcode>
 - GNU Lesser General Public License 2.1: <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>
 - SIL Open Font License 1.1: <https://openfontlicense.org/open-font-license-official-text/>

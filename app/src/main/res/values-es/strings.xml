@@ -121,6 +121,8 @@
 	<string name="kao_row_summary">Por qué apps como esta pueden dejar de instalarse</string>
 	<string name="kao_show_banner">Mostrar el aviso en la biblioteca</string>
 
+	<string name="credit_art">Patchouli</string>
+	<string name="credit_art_summary">Chibi de Fantastiic (DeviantArt), CC BY-NC 3.0</string>
 	<string name="credit_design">Diseño</string>
 	<string name="credit_design_summary">Estructura de los componentes de Komi Store (Apache 2.0); el aspecto y las paletas son de Patchouli</string>
 	<string name="credit_player">Reproductor</string>

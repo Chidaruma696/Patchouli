@@ -127,6 +127,8 @@
 	<string name="kao_show_banner">Show the notice in the library</string>
 
 	<!-- credits -->
+	<string name="credit_art">Patchouli</string>
+	<string name="credit_art_summary">Chibi by Fantastiic (DeviantArt), CC BY-NC 3.0</string>
 	<string name="credit_design">Design</string>
 	<string name="credit_design_summary">Component structure from Komi Store (Apache 2.0); the look and the palettes are Patchouli\'s</string>
 	<string name="credit_player">Player</string>

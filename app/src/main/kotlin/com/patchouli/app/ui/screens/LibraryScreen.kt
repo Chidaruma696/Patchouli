@@ -1,5 +1,6 @@
 package com.patchouli.app.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -111,7 +113,8 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 		val loose = Library.home?.sortedVideos().orEmpty()
 		if (shelves.isEmpty() && loose.isEmpty()) {
 			item(span = { GridItemSpan(2) }) {
-				Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+				Column(Modifier.fillMaxWidth().padding(top = 32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+					Image(painterResource(R.drawable.patchouli), contentDescription = null, modifier = Modifier.height(180.dp).padding(bottom = 8.dp))
 					KitText(stringResource(R.string.empty_library), role = KitTextRole.Title, textAlign = TextAlign.Center)
 					val hint = if (AppPrefs.rootPath.isEmpty()) stringResource(R.string.empty_library_hint) else stringResource(R.string.empty_root_hint, AppPrefs.rootPath)
 					KitText(hint, role = KitTextRole.Body, color = colors.onSurfaceVariant, textAlign = TextAlign.Center, uppercase = false)
