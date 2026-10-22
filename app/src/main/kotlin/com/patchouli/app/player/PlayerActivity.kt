@@ -132,6 +132,7 @@ class PlayerActivity : ComponentActivity() {
 	/** Points the player at entry [i]; [fromMs] overrides the remembered position (used when reloading). */
 	private fun load(i: Int, autoplay: Boolean, fromMs: Long?) {
 		saveProgress()
+		ended = false
 		index = i.coerceIn(0, maxOf(playlist.lastIndex, 0))
 		val path = currentPath
 		val media = if (contentUri != null) {
@@ -247,18 +248,30 @@ class PlayerActivity : ComponentActivity() {
 		requestedOrientation = orientation
 	}
 
-	/** Called when a file ends: the next one, or out. */
+	/** Set when the current file ran to its end, so nothing saves a stray position over the "watched" mark. */
+	private var ended = false
+
+	/** Called when a file ends (from libVLC's thread): marks it watched, then the next one, or out. */
 	fun onEnded() {
-		currentPath?.let { Progress.update(it, player.length, player.length) }
-		if (AppPrefs.autoplayNext && hasNext) next() else finish()
+		ended = true
+		val path = currentPath
+		// once stopped the player may answer 0 for the length: the bookmark remembers it
+		val length = player.length.takeIf { it > 0 } ?: path?.let { Progress[it] }?.lengthMs ?: 0L
+		runOnUiThread {
+			if (path != null && length > 0) Progress.update(path, length, length)
+			if (AppPrefs.autoplayNext && hasNext) next() else finish()
+		}
 	}
 
 	fun saveProgress() {
-		if (!::player.isInitialized) return
+		if (!::player.isInitialized || ended) return
 		val path = currentPath ?: return
 		val length = player.length
 		val time = player.time
-		if (length > 0 && time >= 0) Progress.update(path, time, length)
+		if (length <= 0 || time < 0) return
+		// a 0 right after opening or stopping must not wipe a finished video back to unwatched
+		if (time < 1_000 && Progress[path]?.finished == true) return
+		Progress.update(path, time, length)
 	}
 
 	override fun onPause() {

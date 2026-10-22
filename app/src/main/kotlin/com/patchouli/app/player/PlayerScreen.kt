@@ -126,6 +126,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 
 	val subtitleLabel = stringResource(R.string.subtitles)
 	val audioLabel = stringResource(R.string.audio_tracks)
+	val watchedLabel = stringResource(R.string.watched)
 
 	DisposableEffect(player) {
 		val listener = MediaPlayer.EventListener { event ->
@@ -138,7 +139,8 @@ fun PlayerScreen(activity: PlayerActivity) {
 				MediaPlayer.Event.TimeChanged -> timeMs = event.timeChanged
 				MediaPlayer.Event.LengthChanged -> length = event.lengthChanged
 				MediaPlayer.Event.EncounteredError -> { buffering = false; error = true }
-				MediaPlayer.Event.EndReached -> activity.onEnded()
+				// a tick in the middle for a second: this one is done
+				MediaPlayer.Event.EndReached -> { hud = Hud(R.drawable.ic_check, "✓  $watchedLabel"); activity.onEnded() }
 			}
 		}
 		player.setEventListener(listener)
