@@ -280,7 +280,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 		if (locked) {
 			if (unlockVisible) {
 				Box(Modifier.align(Alignment.CenterStart).padding(start = 20.dp)) {
-					RoundButton(R.drawable.ic_lock, stringResource(R.string.unlock), size = 52.dp) { locked = false; unlockVisible = false; controlsVisible = true }
+					FlatButton(R.drawable.ic_lock, stringResource(R.string.unlock), size = 52.dp, backed = true) { locked = false; unlockVisible = false; controlsVisible = true }
 				}
 			}
 		} else if (controlsVisible) {
@@ -301,10 +301,13 @@ fun PlayerScreen(activity: PlayerActivity) {
 					zoom = 1f
 					player.scale = 0f
 					player.videoScale = ScaleModes[scaleIndex].first
+					// the button is a glyph now, so the mode's name flashes in the middle instead
+					hud = Hud(R.drawable.ic_aspect, context.getString(ScaleModes[scaleIndex].second))
 				},
 				onSubtitles = { sheet = "spu" },
 				onAudio = { sheet = "audio" },
 				onMore = { sheet = "more" },
+				onPip = { activity.enterPip() },
 				onCast = activity.currentFile?.let { { casting = true } },
 			)
 		}
@@ -358,13 +361,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 						ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT -> "Portrait"
 						else -> "Auto"
 					},
-					showDivider = true,
 					onClick = { activity.cycleOrientation() },
-				)
-				KitListRow(
-					title = stringResource(R.string.pip_enter),
-					subtitle = stringResource(R.string.pip_summary),
-					onClick = { sheet = null; activity.enterPip() },
 				)
 			}
 		}
@@ -388,17 +385,34 @@ private fun HudView(hud: Hud) {
 	}
 }
 
+/** The player's buttons, MX style: a bare white glyph on the dark strip, every one the same box, no discs. */
 @Composable
-private fun RoundButton(icon: Int, description: String, size: androidx.compose.ui.unit.Dp = 44.dp, enabled: Boolean = true, onClick: () -> Unit) {
+private fun FlatButton(icon: Int, description: String, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 44.dp, iconSize: androidx.compose.ui.unit.Dp = 26.dp, enabled: Boolean = true, backed: Boolean = false, onClick: () -> Unit) {
 	Box(
-		modifier = Modifier
+		modifier = modifier
 			.size(size)
 			.clip(CircleShape)
-			.background(Color.White.copy(alpha = if (enabled) 0.14f else 0.06f))
+			// alone on the bare video (the unlock button) it needs a disc to read as a button
+			.background(if (backed) Color.Black.copy(alpha = 0.5f) else Color.Transparent)
 			.clickable(enabled = enabled, interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
 		contentAlignment = Alignment.Center,
 	) {
-		Icon(ImageVector.vectorResource(icon), contentDescription = description, tint = Color.White.copy(alpha = if (enabled) 1f else 0.4f), modifier = Modifier.size(size * 0.5f))
+		Icon(ImageVector.vectorResource(icon), contentDescription = description, tint = Color.White.copy(alpha = if (enabled) 1f else 0.35f), modifier = Modifier.size(iconSize))
+	}
+}
+
+/** A word where MX uses one (HW/SW): same box as the glyph buttons so the row lines up. */
+@Composable
+private fun FlatWord(text: String, onClick: () -> Unit) {
+	Box(
+		modifier = Modifier
+			.height(44.dp)
+			.clip(RoundedCornerShape(8.dp))
+			.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+			.padding(horizontal = 8.dp),
+		contentAlignment = Alignment.Center,
+	) {
+		KitText(text, role = KitTextRole.Mono, color = Color.White, fontSize = 13.sp, maxLines = 1)
 	}
 }
 
@@ -419,34 +433,35 @@ private fun Controls(
 	onSubtitles: () -> Unit,
 	onAudio: () -> Unit,
 	onMore: () -> Unit,
+	onPip: () -> Unit,
 	onCast: (() -> Unit)? = null,
 ) {
 	Column(Modifier.fillMaxSize()) {
-		// top: back, title, decoder, subtitles, audio, more
+		// top, MX style: back and title on the left; HW/SW, TV, floating window, subtitles, audio, more on the right
 		Row(
-			modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))).padding(horizontal = 12.dp, vertical = 10.dp),
+			modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))).padding(horizontal = 6.dp, vertical = 6.dp),
 			verticalAlignment = Alignment.CenterVertically,
-			horizontalArrangement = Arrangement.spacedBy(8.dp),
 		) {
-			RoundButton(R.drawable.ic_back, stringResource(R.string.back)) { activity.finish() }
-			Column(Modifier.weight(1f)) {
+			FlatButton(R.drawable.ic_back, stringResource(R.string.back)) { activity.finish() }
+			Column(Modifier.weight(1f).padding(start = 4.dp, end = 8.dp)) {
 				KitText(activity.title, role = KitTextRole.Label, color = Color.White, uppercase = false, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
 				if (activity.count > 1) {
 					KitText("${activity.index + 1} / ${activity.count}", role = KitTextRole.Mono, color = Color.White.copy(alpha = 0.7f), maxLines = 1)
 				}
 			}
-			KitButton(onClick = { activity.toggleDecoder() }, label = stringResource(if (activity.hardware) R.string.decoder_hw else R.string.decoder_sw), size = KitButtonSize.Sm, container = Color.White.copy(alpha = 0.14f))
-			if (onCast != null) RoundButton(R.drawable.ic_cast, stringResource(R.string.cast_to_tv), onClick = onCast)
-			RoundButton(R.drawable.ic_subtitles, stringResource(R.string.subtitles), onClick = onSubtitles)
-			RoundButton(R.drawable.ic_audio, stringResource(R.string.audio_tracks), onClick = onAudio)
-			RoundButton(R.drawable.ic_more, stringResource(R.string.more), onClick = onMore)
+			FlatWord(stringResource(if (activity.hardware) R.string.decoder_hw else R.string.decoder_sw)) { activity.toggleDecoder() }
+			if (onCast != null) FlatButton(R.drawable.ic_cast, stringResource(R.string.cast_to_tv), onClick = onCast)
+			FlatButton(R.drawable.ic_pip, stringResource(R.string.pip_enter), onClick = onPip)
+			FlatButton(R.drawable.ic_subtitles, stringResource(R.string.subtitles), onClick = onSubtitles)
+			FlatButton(R.drawable.ic_audio, stringResource(R.string.audio_tracks), onClick = onAudio)
+			FlatButton(R.drawable.ic_more, stringResource(R.string.more), onClick = onMore)
 		}
 		Spacer(Modifier.weight(1f))
-		// bottom: times and slider, then the row of buttons
+		// bottom: times and slider, then lock | prev play next | aspect rotate, all on one line
 		Column(
-			modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))).padding(horizontal = 16.dp, vertical = 8.dp),
+			modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))).padding(horizontal = 10.dp, vertical = 4.dp),
 		) {
-			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(horizontal = 6.dp)) {
 				KitText(fmtTime(timeMs), role = KitTextRole.Mono, color = Color.White, fontSize = 13.sp)
 				Slider(
 					value = position,
@@ -460,20 +475,17 @@ private fun Controls(
 					modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onToggleRemaining),
 				)
 			}
-			Row(
-				modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-				verticalAlignment = Alignment.CenterVertically,
-				horizontalArrangement = Arrangement.SpaceBetween,
-			) {
-				RoundButton(R.drawable.ic_lock, stringResource(R.string.lock), onClick = onLock)
-				Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-					RoundButton(R.drawable.ic_prev, stringResource(R.string.previous), enabled = activity.hasPrevious) { activity.previous() }
-					RoundButton(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play, stringResource(if (isPlaying) R.string.pause else R.string.play), size = 60.dp, onClick = onPlayPause)
-					RoundButton(R.drawable.ic_next, stringResource(R.string.next), enabled = activity.hasNext) { activity.next() }
+			Box(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+				FlatButton(R.drawable.ic_lock, stringResource(R.string.lock), modifier = Modifier.align(Alignment.CenterStart), onClick = onLock)
+				// the three in the exact middle of the screen, whatever sits at the sides
+				Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.align(Alignment.Center)) {
+					FlatButton(R.drawable.ic_prev, stringResource(R.string.previous), enabled = activity.hasPrevious) { activity.previous() }
+					FlatButton(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play, stringResource(if (isPlaying) R.string.pause else R.string.play), size = 64.dp, iconSize = 44.dp, onClick = onPlayPause)
+					FlatButton(R.drawable.ic_next, stringResource(R.string.next), enabled = activity.hasNext) { activity.next() }
 				}
-				Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-					KitButton(onClick = onAspect, label = scaleLabel, size = KitButtonSize.Sm, container = Color.White.copy(alpha = 0.14f))
-					RoundButton(R.drawable.ic_rotate, stringResource(R.string.rotate)) { activity.cycleOrientation() }
+				Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterEnd)) {
+					FlatButton(R.drawable.ic_aspect, scaleLabel, onClick = onAspect)
+					FlatButton(R.drawable.ic_rotate, stringResource(R.string.rotate)) { activity.cycleOrientation() }
 				}
 			}
 		}

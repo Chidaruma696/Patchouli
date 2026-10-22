@@ -84,9 +84,7 @@
 	<string name="err_cannot_play">No se pudo abrir este vídeo</string>
 	<string name="retry">Reintentar</string>
 	<string name="end_of_list">Fin de la carpeta</string>
-	<string name="pip">Imagen en imagen</string>
-	<string name="pip_summary">Sigue reproduciendo en una ventana flotante cuando sales del reproductor</string>
-	<string name="pip_enter">Imagen en imagen</string>
+	<string name="pip_enter">Ventana flotante</string>
 	<string name="subtitles_load">Cargar un archivo de subtítulos…</string>
 	<string name="search_library">Buscar en la biblioteca</string>
 	<string name="library_layout">Vista de la biblioteca</string>

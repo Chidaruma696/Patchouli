@@ -43,8 +43,8 @@ import java.io.File
 /**
  * libVLC-backed player of local files. Gets a playlist (the videos of a folder, in order) and an
  * index, or a single uri when another app hands us a video. Remembers where each file was left,
- * picks up subtitle files lying next to the video, and keeps playing in a small window when the
- * user leaves (picture in picture).
+ * picks up subtitle files lying next to the video, and shrinks to a small floating window
+ * (picture in picture) when asked with the button.
  */
 class PlayerActivity : ComponentActivity() {
 
@@ -206,8 +206,9 @@ class PlayerActivity : ComponentActivity() {
 			getString(if (playing) R.string.pause else R.string.play),
 			PendingIntent.getBroadcast(this, 1, Intent(ACTION_PIP).setPackage(packageName), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE),
 		)
+		// never on its own when the user leaves: only from the button
 		return PictureInPictureParams.Builder().setAspectRatio(safe).setActions(listOf(toggle)).apply {
-			if (Build.VERSION.SDK_INT >= 31) setAutoEnterEnabled(AppPrefs.pip && playing)
+			if (Build.VERSION.SDK_INT >= 31) setAutoEnterEnabled(false)
 		}.build()
 	}
 
@@ -221,12 +222,6 @@ class PlayerActivity : ComponentActivity() {
 	fun enterPip() {
 		if (!pipSupported) return
 		runCatching { enterPictureInPictureMode(pipParams()) }.onFailure { Log.w(TAG, "pip", it) }
-	}
-
-	override fun onUserLeaveHint() {
-		super.onUserLeaveHint()
-		// before 12 the system does not enter on its own; home or recents while playing shrinks us
-		if (Build.VERSION.SDK_INT < 31 && AppPrefs.pip && !inPip && ::player.isInitialized && player.isPlaying) enterPip()
 	}
 
 	override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {

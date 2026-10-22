@@ -87,9 +87,7 @@
 	<string name="err_cannot_play">This video could not be opened</string>
 	<string name="retry">Retry</string>
 	<string name="end_of_list">End of the folder</string>
-	<string name="pip">Picture in picture</string>
-	<string name="pip_summary">Keep playing in a small floating window when you leave the player</string>
-	<string name="pip_enter">Picture in picture</string>
+	<string name="pip_enter">Floating window</string>
 	<string name="subtitles_load">Load a subtitle file…</string>
 	<string name="search_library">Search the library</string>
 	<string name="library_layout">Library view</string>
