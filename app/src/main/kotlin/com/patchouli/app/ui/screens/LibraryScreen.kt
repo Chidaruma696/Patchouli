@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,7 +43,6 @@ import com.patchouli.app.R
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Library
-import com.patchouli.app.library.Mark
 import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
 import com.patchouli.app.library.Video
@@ -53,7 +51,7 @@ import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
 import com.patchouli.app.ui.kit.KitButtonVariant
 import com.patchouli.app.ui.kit.KitCircularProgress
-import com.patchouli.app.ui.kit.KitLinearProgress
+import com.patchouli.app.ui.kit.KitFab
 import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitSectionHead
 import com.patchouli.app.ui.kit.KitSurface
@@ -85,6 +83,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 		}
 		return
 	}
+	Box(Modifier.fillMaxSize()) {
 	LazyVerticalGrid(
 		columns = GridCells.Fixed(2),
 		modifier = Modifier.fillMaxSize(),
@@ -124,14 +123,6 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 			}
 			return@LazyVerticalGrid
 		}
-		if (last != null) {
-			item(span = { GridItemSpan(2) }) {
-				Column {
-					KitSectionHead(label = stringResource(R.string.continue_watching), kicker = "続き")
-					ResumeButton(last.first, last.second, onClick = { onPlay(last.first) })
-				}
-			}
-		}
 		val loose = Library.home?.sortedVideos().orEmpty()
 		if (shelves.isEmpty() && loose.isEmpty()) {
 			item(span = { GridItemSpan(2) }) {
@@ -158,6 +149,16 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 				}
 			}
 		}
+	}
+	// the one button: play on, from where the last video was left; floats over the shelves, bottom right
+	if (last != null) {
+		KitFab(
+			onClick = { onPlay(last.first) },
+			icon = ImageVector.vectorResource(R.drawable.ic_play),
+			contentDescription = stringResource(R.string.resume_at, fmtTime(last.second.positionMs)),
+			modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = contentPadding.calculateBottomPadding() + 16.dp),
+		)
+	}
 	}
 }
 
@@ -227,38 +228,6 @@ fun FolderCard(folder: Folder, onClick: () -> Unit, onLongClick: (() -> Unit)? =
 					role = KitTextRole.Label, color = colors.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, uppercase = false,
 				)
 			}
-		}
-	}
-}
-
-/** One wide button, no frame grab: a play disc, the video, its series and where it stopped, and a thin bar underneath. */
-@Composable
-private fun ResumeButton(video: Video, mark: Mark, onClick: () -> Unit) {
-	val colors = LocalPersonality.current.colors
-	KitSurface(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-		Column {
-			Row(
-				modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
-				verticalAlignment = Alignment.CenterVertically,
-				horizontalArrangement = Arrangement.spacedBy(14.dp),
-			) {
-				Box(Modifier.size(44.dp).clip(CircleShape).background(colors.primary), contentAlignment = Alignment.Center) {
-					Icon(ImageVector.vectorResource(R.drawable.ic_play), contentDescription = stringResource(R.string.play), tint = colors.onPrimary, modifier = Modifier.size(24.dp))
-				}
-				Column(Modifier.weight(1f)) {
-					KitText(video.title, role = KitTextRole.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, uppercase = false)
-					Spacer(Modifier.height(2.dp))
-					KitText(
-						text = buildString {
-							video.folderPath.substringAfterLast('/').takeIf { it.isNotEmpty() }?.let { append(Names.series(it)); append("  ") }
-							append(stringResource(R.string.resume_at, fmtTime(mark.positionMs)))
-							if (mark.lengthMs > 0) append(" / ${fmtTime(mark.lengthMs)}")
-						},
-						role = KitTextRole.Mono, color = colors.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-					)
-				}
-			}
-			KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.fillMaxWidth().height(3.dp))
 		}
 	}
 }
