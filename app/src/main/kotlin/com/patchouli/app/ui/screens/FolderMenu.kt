@@ -31,6 +31,7 @@ import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
+import com.patchouli.app.library.Video
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitCircularProgress
 import com.patchouli.app.ui.kit.KitListContainer
@@ -42,6 +43,10 @@ import com.patchouli.app.ui.kit.KitTextRole
 import com.patchouli.app.ui.kit.LocalPersonality
 import com.patchouli.app.ui.kit.kitShape
 import kotlinx.coroutines.launch
+
+/** Every watched video under a folder, its subfolders included. */
+private fun watchedVideos(folder: Folder): List<Video> =
+	folder.videos.filter { Progress[it.path]?.finished == true } + folder.folders.flatMap { watchedVideos(it) }
 
 /** Long press on a folder: another cover from the catalogue, one from the phone, or "not a series". */
 @Composable
@@ -57,6 +62,7 @@ fun FolderMenu(folder: Folder, onDismiss: () -> Unit) {
 	var busy by remember { mutableStateOf(false) }
 	var web by remember { mutableStateOf(false) }
 	var organize by remember { mutableStateOf(false) }
+	val delete = rememberVideoDeleter(onDone = onDismiss)
 	if (web) {
 		WebCoverPicker(folder, initialQuery = "$query anime cover", onDismiss = { web = false }, onPicked = { web = false; onDismiss() })
 		return
@@ -116,11 +122,22 @@ fun FolderMenu(folder: Folder, onDismiss: () -> Unit) {
 				// the whole shelf at once: everything watched, or nothing yet
 				if (folder.total > 0) {
 					val allWatched = folder.fullyWatched
+					val watched = watchedVideos(folder)
 					KitListRow(
 						title = stringResource(if (allWatched) R.string.mark_folder_unwatched else R.string.mark_folder_watched),
 						subtitle = stringResource(R.string.mark_folder_summary, Progress.watchedIn(folder), folder.total),
 						onClick = { Progress.markFolder(folder, !allWatched); onDismiss() },
+						showDivider = watched.isNotEmpty(),
 					)
+					// room back on the phone: the episodes already seen, gone
+					if (watched.isNotEmpty()) {
+						KitListRow(
+							title = stringResource(R.string.delete_watched),
+							subtitle = stringResource(R.string.delete_watched_summary, watched.size, fmtSize(watched.sumOf { it.size })),
+							destructive = true,
+							onClick = { delete(watched) },
+						)
+					}
 				}
 			}
 			if (lookup != null && lookup.anime == null && !notSeries) {

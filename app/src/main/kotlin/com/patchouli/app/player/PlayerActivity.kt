@@ -21,6 +21,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.util.Log
 import android.util.Rational
 import android.view.WindowManager
@@ -36,6 +37,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.patchouli.app.BuildConfig
 import com.patchouli.app.R
+import com.patchouli.app.catalog.AniListSync
 import com.patchouli.app.catalog.AniSkip
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.catalog.SkipInterval
@@ -86,10 +88,83 @@ class PlayerActivity : ComponentActivity() {
 	/** The bookmark this file resumed from when it is old enough that the user may rather start over; null otherwise. */
 	var staleResume by mutableStateOf<Mark?>(null)
 		private set
-	/** The opening, the ending, a recap of the current episode, as AniSkip has them; empty until known, or when nobody marked it. */
-	var skips by mutableStateOf<List<SkipInterval>>(emptyList())
-		private set
+	/** The opening, the ending, a recap of the current episode: AniSkip's marks, or the file's own chapters when it has none. */
+	val skips: List<SkipInterval> get() = serviceSkips.ifEmpty { chapterSkips }
+	private var serviceSkips by mutableStateOf<List<SkipInterval>>(emptyList())
+	private var chapterSkips by mutableStateOf<List<SkipInterval>>(emptyList())
 	private var skipJob: Job? = null
+	/** The chapters of the file, once it plays. */
+	var chapters by mutableStateOf<List<MediaPlayer.Chapter>>(emptyList())
+		private set
+
+	// --- the knobs of one sitting: timer, delays, extra volume ---
+
+	/** When the sleep timer fires (SystemClock.elapsedRealtime), or null. */
+	var sleepAt by mutableStateOf<Long?>(null)
+		private set
+	/** Stop after this episode instead of going on. */
+	var sleepAtEnd by mutableStateOf(false)
+		private set
+	/** Subtitles later (positive) or earlier than the picture, in ms; back to zero with every file. */
+	var subtitleDelayMs by mutableStateOf(0L)
+		private set
+	var audioDelayMs by mutableStateOf(0L)
+		private set
+	/** The player's own volume, up to 200 % for the quiet files. */
+	var volumeBoost by mutableStateOf(100)
+		private set
+
+	fun setSleepMinutes(minutes: Int?) {
+		sleepAtEnd = false
+		sleepAt = minutes?.let { SystemClock.elapsedRealtime() + it * 60_000L }
+	}
+
+	fun sleepWhenEpisodeEnds(value: Boolean) {
+		sleepAt = null
+		sleepAtEnd = value
+	}
+
+	/** The timer went off: the picture stops and the player closes. */
+	fun sleepNow() {
+		sleepAt = null
+		if (player.isPlaying) player.pause()
+		finish()
+	}
+
+	fun setSubtitleDelay(ms: Long) {
+		subtitleDelayMs = ms.coerceIn(-30_000L, 30_000L)
+		player.setSpuDelay(subtitleDelayMs * 1000)
+	}
+
+	fun setAudioDelay(ms: Long) {
+		audioDelayMs = ms.coerceIn(-30_000L, 30_000L)
+		player.setAudioDelay(audioDelayMs * 1000)
+	}
+
+	fun boostVolume(percent: Int) {
+		volumeBoost = percent.coerceIn(100, 200)
+		player.volume = volumeBoost
+	}
+
+	/** Called once the file plays: the delays and the volume of this sitting apply to it, and its chapters are read. */
+	fun onPlayingStarted() {
+		if (subtitleDelayMs != 0L) player.setSpuDelay(subtitleDelayMs * 1000)
+		if (audioDelayMs != 0L) player.setAudioDelay(audioDelayMs * 1000)
+		if (volumeBoost != 100) player.volume = volumeBoost
+		val found = runCatching { player.getChapters(-1)?.toList() }.getOrNull().orEmpty()
+		chapters = found
+		// a chapter called "OP", "Opening", "ED", "Ending", "Intro"… stands in for AniSkip when it has nothing
+		chapterSkips = found.mapNotNull { chapter ->
+			val name = chapter.name.orEmpty().trim()
+			val type = when {
+				Regex("""^(op|opening|intro)\b""", RegexOption.IGNORE_CASE).containsMatchIn(name) -> "op"
+				Regex("""^(ed|ending|outro)\b""", RegexOption.IGNORE_CASE).containsMatchIn(name) -> "ed"
+				Regex("""^(recap|previously)\b""", RegexOption.IGNORE_CASE).containsMatchIn(name) -> "recap"
+				else -> null
+			} ?: return@mapNotNull null
+			if (chapter.duration <= 0) null else SkipInterval(chapter.timeOffset, chapter.timeOffset + chapter.duration, type)
+		}
+	}
 
 	// --- the system's side: the media session (headset buttons, Bluetooth, the lock screen) and the audio focus ---
 
@@ -105,7 +180,7 @@ class PlayerActivity : ComponentActivity() {
 			AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> { if (player.isPlaying) { pausedByFocus = true; player.pause() } }
 			AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> player.volume = 30
 			AudioManager.AUDIOFOCUS_GAIN -> {
-				player.volume = 100
+				player.volume = volumeBoost
 				if (pausedByFocus) { pausedByFocus = false; player.play() }
 			}
 		}
@@ -163,6 +238,8 @@ class PlayerActivity : ComponentActivity() {
 		}
 
 		val options = arrayListOf("--audio-time-stretch") // keeps the pitch when playing faster
+		// how big the subtitles are: libVLC's relative size, smaller number = bigger text
+		options += "--freetype-rel-fontsize=${AppPrefs.subtitleSize}"
 		if (BuildConfig.DEBUG) options += "-vv"
 		libVlc = LibVLC(this, options)
 		player = MediaPlayer(libVlc)
@@ -213,6 +290,10 @@ class PlayerActivity : ComponentActivity() {
 		staleResume = mark?.takeIf { fromMs == null && System.currentTimeMillis() - it.at > STALE_RESUME_MS }
 		spuApplied = false
 		audioApplied = false
+		// a new file: delays back to zero (they belong to one file), chapters not known yet
+		if (fromMs == null) { subtitleDelayMs = 0L; audioDelayMs = 0L }
+		chapters = emptyList()
+		chapterSkips = emptyList()
 		player.stop()
 		player.media = media
 		media.release()
@@ -229,14 +310,14 @@ class PlayerActivity : ComponentActivity() {
 	/** Asks AniSkip for the current episode, when the folder is a known series and the file carries an episode number. */
 	private fun lookupSkips(path: String?) {
 		skipJob?.cancel()
-		skips = emptyList()
+		serviceSkips = emptyList()
 		if (path == null || !AppPrefs.coversOnline || AppPrefs.skipMode == AppPrefs.SKIP_NEVER) return
 		val video = Library.videoAt(path) ?: return
 		val episode = video.episode ?: return
 		val malId = Library.find(video.folderPath)?.let { Metadata[it] }?.anime?.malId ?: return
 		skipJob = lifecycleScope.launch {
 			val found = runCatching { AniSkip.intervals(malId, episode, video.durationMs) }.onFailure { Log.w(TAG, "aniskip", it) }.getOrDefault(emptyList())
-			if (currentPath == path) skips = found
+			if (currentPath == path) serviceSkips = found
 		}
 	}
 
@@ -435,8 +516,12 @@ class PlayerActivity : ComponentActivity() {
 		// once stopped the player may answer 0 for the length: the bookmark remembers it
 		val length = player.length.takeIf { it > 0 } ?: path?.let { Progress[it] }?.lengthMs ?: 0L
 		runOnUiThread {
-			if (path != null && length > 0) Progress.update(path, length, length)
-			if (AppPrefs.autoplayNext && hasNext) next() else finish()
+			if (path != null && length > 0) {
+				Progress.update(path, length, length)
+				// the user's AniList list hears of it, when an account is connected
+				Library.videoAt(path)?.let { AniListSync.onWatched(it) }
+			}
+			if (sleepAtEnd) finish() else if (AppPrefs.autoplayNext && hasNext) next() else finish()
 		}
 	}
 

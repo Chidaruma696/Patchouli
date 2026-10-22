@@ -101,6 +101,9 @@ private val ScaleModes = listOf(
 )
 
 private val Speeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+private val SleepMinutes = listOf(15, 30, 45, 60)
+/** One step of the subtitle and audio delay buttons. */
+private const val DELAY_STEP_MS = 100L
 
 /** What a gesture shows while it lasts: an icon, a line of text, a bar. */
 private data class Hud(val icon: Int?, val text: String, val fraction: Float? = null)
@@ -150,7 +153,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 		val listener = MediaPlayer.EventListener { event ->
 			when (event.type) {
 				MediaPlayer.Event.Opening -> { buffering = true; error = false }
-				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams(); activity.applyRememberedTracks(); activity.syncSession(true, speed) }
+				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams(); activity.applyRememberedTracks(); activity.onPlayingStarted(); activity.syncSession(true, speed) }
 				// a track showed up: maybe the one the series was last watched with
 				MediaPlayer.Event.ESAdded -> activity.applyRememberedTracks()
 				MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped -> { isPlaying = false; activity.updatePipParams(); activity.syncSession(false, speed) }
@@ -187,6 +190,13 @@ fun PlayerScreen(activity: PlayerActivity) {
 			delay(5_000)
 			activity.saveProgress()
 		}
+	}
+
+	// the sleep timer: when its moment comes, the player closes
+	LaunchedEffect(activity.sleepAt) {
+		val at = activity.sleepAt ?: return@LaunchedEffect
+		delay((at - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0L))
+		activity.sleepNow()
 	}
 
 	// the opening or the ending we are in right now, if AniSkip knows where it is (ending before its last second, so a seek to it does not land back inside)
@@ -397,8 +407,27 @@ fun PlayerScreen(activity: PlayerActivity) {
 			title = subtitleLabel, tracks = player.spuTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.spuTrack,
 			onSelect = { player.setSpuTrack(it); activity.rememberTrack(TrackPrefs.KIND_SUBTITLES, it); sheet = null }, onDismiss = { sheet = null },
 			extra = stringResource(R.string.subtitles_load), onExtra = { activity.pickSubtitle(); sheet = null },
+			delayMs = activity.subtitleDelayMs, onDelay = { activity.setSubtitleDelay(it) },
 		)
-		"audio" -> TrackSheet(title = audioLabel, tracks = player.audioTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.audioTrack, onSelect = { player.setAudioTrack(it); activity.rememberTrack(TrackPrefs.KIND_AUDIO, it); sheet = null }, onDismiss = { sheet = null })
+		"audio" -> TrackSheet(
+			title = audioLabel, tracks = player.audioTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.audioTrack,
+			onSelect = { player.setAudioTrack(it); activity.rememberTrack(TrackPrefs.KIND_AUDIO, it); sheet = null }, onDismiss = { sheet = null },
+			delayMs = activity.audioDelayMs, onDelay = { activity.setAudioDelay(it) },
+		)
+		"chapters" -> KitSheet(onDismiss = { sheet = null }, title = stringResource(R.string.chapters), titleJp = "章") {
+			val current = runCatching { player.chapter }.getOrDefault(-1)
+			KitListContainer {
+				activity.chapters.forEachIndexed { index, chapter ->
+					KitListRow(
+						title = chapter.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.chapter_n, index + 1),
+						subtitle = fmtTime(chapter.timeOffset) + (if (chapter.duration > 0) " · " + fmtTime(chapter.duration) else ""),
+						selected = index == current,
+						onClick = { player.time = chapter.timeOffset; timeMs = chapter.timeOffset; sheet = null },
+						showDivider = index < activity.chapters.lastIndex,
+					)
+				}
+			}
+		}
 		"more" -> KitSheet(onDismiss = { sheet = null }, title = activity.title) {
 			KitListContainer {
 				KitListRow(title = stringResource(R.string.speed), showDivider = true)
@@ -410,6 +439,43 @@ fun PlayerScreen(activity: PlayerActivity) {
 					height = 34.dp,
 					fillWidth = true,
 				)
+				// the sleep timer: so many minutes, or the end of this episode
+				val sleepLeft = activity.sleepAt?.let { ((it - android.os.SystemClock.elapsedRealtime()) / 60_000L + 1).coerceAtLeast(1) }
+				KitListRow(
+					title = stringResource(R.string.sleep_timer),
+					subtitle = when {
+						activity.sleepAtEnd -> stringResource(R.string.sleep_at_end)
+						sleepLeft != null -> stringResource(R.string.sleep_left, sleepLeft)
+						else -> stringResource(R.string.sleep_off)
+					},
+					showDivider = true,
+				)
+				KitSegmented(
+					selected = when { activity.sleepAtEnd -> -1; activity.sleepAt == null -> 0; else -> sleepLeft?.let { m -> SleepMinutes.minByOrNull { abs(it - m.toInt()) } } ?: 0 },
+					items = listOf(KitSegmentedItem(0, stringResource(R.string.sleep_off_short))) + SleepMinutes.map { KitSegmentedItem(it, "$it′") } + KitSegmentedItem(-1, stringResource(R.string.sleep_end_short)),
+					onSelect = { if (it == -1) activity.sleepWhenEpisodeEnds(true) else activity.setSleepMinutes(it.takeIf { m -> m > 0 }) },
+					modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(vertical = 10.dp),
+					height = 34.dp,
+					fillWidth = true,
+				)
+				// the player's own volume above the phone's, for the quiet files
+				KitListRow(title = stringResource(R.string.volume_boost), subtitle = stringResource(R.string.volume_boost_summary), showDivider = true)
+				KitSegmented(
+					selected = activity.volumeBoost,
+					items = listOf(100, 125, 150, 200).map { KitSegmentedItem(it, "$it %") },
+					onSelect = { activity.boostVolume(it) },
+					modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(vertical = 10.dp),
+					height = 34.dp,
+					fillWidth = true,
+				)
+				if (activity.chapters.isNotEmpty()) {
+					KitListRow(
+						title = stringResource(R.string.chapters),
+						subtitle = stringResource(R.string.chapters_n, activity.chapters.size),
+						onClick = { sheet = "chapters" },
+						showDivider = true,
+					)
+				}
 				KitListRow(
 					title = stringResource(R.string.default_decoder),
 					subtitle = stringResource(R.string.decoder_summary),
@@ -571,7 +637,12 @@ private fun Controls(
 }
 
 @Composable
-private fun TrackSheet(title: String, tracks: List<Pair<Int, String>>, selected: Int, onSelect: (Int) -> Unit, onDismiss: () -> Unit, extra: String? = null, onExtra: (() -> Unit)? = null) {
+private fun TrackSheet(
+	title: String, tracks: List<Pair<Int, String>>, selected: Int, onSelect: (Int) -> Unit, onDismiss: () -> Unit,
+	extra: String? = null, onExtra: (() -> Unit)? = null,
+	delayMs: Long? = null, onDelay: ((Long) -> Unit)? = null,
+) {
+	val colors = LocalPersonality.current.colors
 	KitSheet(onDismiss = onDismiss, title = title) {
 		if (tracks.isEmpty() && extra == null) {
 			KitText(stringResource(R.string.no_tracks), role = KitTextRole.Body, uppercase = false)
@@ -587,6 +658,27 @@ private fun TrackSheet(title: String, tracks: List<Pair<Int, String>>, selected:
 				}
 				// a way to bring a file from anywhere on the phone (a .srt downloaded apart, say)
 				if (extra != null) KitListRow(title = extra, strong = true, onClick = onExtra)
+			}
+		}
+		// the delay, a tenth of a second at a time; a tap on the number puts it back to zero
+		if (delayMs != null && onDelay != null && tracks.size > 1) {
+			KitListContainer(Modifier.padding(top = 12.dp)) {
+				KitListRow(
+					title = stringResource(R.string.track_delay),
+					subtitle = stringResource(R.string.track_delay_summary),
+					trailing = {
+						Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+							KitButton(onClick = { onDelay(delayMs - DELAY_STEP_MS) }, label = "−", size = KitButtonSize.Sm, variant = KitButtonVariant.Outline)
+							KitText(
+								text = String.format(java.util.Locale.ROOT, "%+.1f s", delayMs / 1000.0),
+								role = KitTextRole.Mono, color = if (delayMs == 0L) colors.onSurfaceVariant else colors.onSurface,
+								modifier = Modifier.width(64.dp).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onDelay(0L) },
+								textAlign = TextAlign.Center,
+							)
+							KitButton(onClick = { onDelay(delayMs + DELAY_STEP_MS) }, label = "+", size = KitButtonSize.Sm, variant = KitButtonVariant.Outline)
+						}
+					},
+				)
 			}
 		}
 	}

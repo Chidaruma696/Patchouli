@@ -168,12 +168,13 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 	if (layoutSheet) LibraryLayoutSheet(onDismiss = { layoutSheet = false })
 }
 
-/** Long press on an episode: call it watched, or not watched, by hand. */
+/** Long press on an episode: call it watched, or not watched, by hand; or get rid of the file. */
 @Composable
 fun VideoMenu(video: Video, onDismiss: () -> Unit) {
 	val colors = LocalPersonality.current.colors
 	val mark = Progress[video.path]
 	val finished = mark?.finished == true
+	val delete = rememberVideoDeleter(onDone = onDismiss)
 	KitSheet(onDismiss = onDismiss, title = video.title, titleJp = "話") {
 		KitText(
 			text = buildString {
@@ -188,17 +189,31 @@ fun VideoMenu(video: Video, onDismiss: () -> Unit) {
 				title = stringResource(if (finished) R.string.mark_unwatched else R.string.mark_watched),
 				icon = ImageVector.vectorResource(R.drawable.ic_check),
 				onClick = { if (finished) Progress.markUnwatched(video) else Progress.markWatched(video); onDismiss() },
-				showDivider = mark?.started == true,
+				showDivider = true,
 			)
 			if (mark?.started == true) {
 				KitListRow(
 					title = stringResource(R.string.forget_position),
 					subtitle = stringResource(R.string.forget_position_summary),
 					onClick = { Progress.forget(video.path); onDismiss() },
+					showDivider = true,
 				)
 			}
+			KitListRow(
+				title = stringResource(R.string.delete_file),
+				subtitle = stringResource(R.string.delete_file_summary, fmtSize(video.size)),
+				destructive = true,
+				onClick = { delete(listOf(video)) },
+			)
 		}
 	}
+}
+
+/** "1.2 GB", "340 MB". */
+fun fmtSize(bytes: Long): String = when {
+	bytes >= 1L shl 30 -> String.format(java.util.Locale.ROOT, "%.1f GB", bytes / (1L shl 30).toDouble())
+	bytes >= 1L shl 20 -> String.format(java.util.Locale.ROOT, "%d MB", bytes shr 20)
+	else -> String.format(java.util.Locale.ROOT, "%d KB", bytes shr 10)
 }
 
 @Composable
