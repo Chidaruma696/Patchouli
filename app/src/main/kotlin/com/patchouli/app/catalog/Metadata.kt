@@ -119,9 +119,17 @@ object Metadata {
 		val query = Names.series(folder.name)
 		scope.launch {
 			try {
+				// a file in the folder with the ids beats any guess from the name
+				val side = sidecar(folder)
+				val byId = when {
+					side?.anilist != null || side?.id != null -> ask("anilist", "#${side.anilist ?: side.id}") { AniList.byId(side.anilist ?: side.id!!)?.let { a -> listOf(a) }.orEmpty() }
+					side?.mal != null -> ask("jikan", "#${side.mal}") { Jikan.byId(side.mal)?.let { a -> listOf(a) }.orEmpty() }
+					else -> null
+				}?.takeIf { it.id != 0 }
 				// AniList first; it goes down now and then, and so does Jikan, so three catalogues in a row.
 				// One that just failed is skipped for a while: Jikan's timeout alone is fifteen seconds.
-				val hit = ask("anilist", query) { AniList.search(it) }
+				val hit = byId
+					?: ask("anilist", query) { AniList.search(it) }
 					?: ask("jikan", query) { Jikan.search(it) }
 					?: ask("kitsu", query) { Kitsu.search(it) }
 					?: throw lastError ?: IllegalStateException("no catalogue answered")
@@ -180,6 +188,37 @@ object Metadata {
 			}
 		}
 		return emptyList()
+	}
+
+	/** Every folder's match, for the backup. */
+	fun export(): Map<String, Lookup> = cache.toMap()
+
+	/** Matches from a backup: taken for folders we have nothing for; a custom cover that is not on this phone is dropped. */
+	fun import(data: Map<String, Lookup>): Int {
+		var taken = 0
+		data.forEach { (path, lookup) ->
+			val have = cache[path]
+			if (have != null && (have.anime != null || have.manual || have.customCover != null)) return@forEach
+			val cover = lookup.customCover?.takeIf { File(it).exists() }
+			if (lookup.anime == null && !lookup.manual && cover == null) return@forEach
+			store(path, lookup.copy(customCover = cover))
+			taken++
+		}
+		return taken
+	}
+
+	/**
+	 * A file left in the folder by hand (or by the downloader) with the catalogue ids, so the name
+	 * never has to be guessed: `anilist.json` or `seija.json`, with "anilist" and/or "mal".
+	 */
+	@Serializable
+	private data class Sidecar(val anilist: Int? = null, val mal: Int? = null, val id: Int? = null)
+
+	private fun sidecar(folder: Folder): Sidecar? {
+		val dir = com.patchouli.app.library.Library.absolute(folder)
+		return listOf("anilist.json", "seija.json").map { File(dir, it) }.firstOrNull { it.isFile }?.let { f ->
+			runCatching { json.decodeFromString<Sidecar>(f.readText()) }.onFailure { Log.w(TAG, "sidecar ${f.path}: ${it.message}") }.getOrNull()
+		}
 	}
 
 	/** The MyAnimeList id of an AniList entry arrived later: every folder that points at that entry learns it. */

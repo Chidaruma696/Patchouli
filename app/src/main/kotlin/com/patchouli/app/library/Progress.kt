@@ -88,6 +88,28 @@ object Progress {
 	/** When something under a folder was last played, for "most recent first"; 0 when nothing was. */
 	fun lastPlayedIn(folder: Folder): Long = maxOf(folder.videos.maxOfOrNull { marks[it.path]?.at ?: 0L } ?: 0L, folder.folders.maxOfOrNull { lastPlayedIn(it) } ?: 0L)
 
+	/** Every bookmark as stored, for the backup. */
+	fun export(): Map<String, String> = marks.entries.associate { (path, m) -> path to "${m.positionMs}|${m.lengthMs}|${m.at}" }
+
+	/** Bookmarks from a backup: each one taken when it is newer than ours. Returns how many came in. */
+	fun import(data: Map<String, String>): Int {
+		var taken = 0
+		data.forEach { (path, raw) ->
+			val parts = raw.split('|')
+			if (parts.size != 3) return@forEach
+			val pos = parts[0].toLongOrNull() ?: return@forEach
+			val len = parts[1].toLongOrNull() ?: return@forEach
+			val at = parts[2].toLongOrNull() ?: return@forEach
+			val have = marks[path]
+			if (have == null || have.at < at) {
+				marks[path] = Mark(pos, len, at)
+				prefs().edit { putString(path, raw) }
+				taken++
+			}
+		}
+		return taken
+	}
+
 	/** The videos left half-way, newest first. */
 	fun continueWatching(limit: Int = 12): List<Pair<String, Mark>> =
 		marks.entries.filter { it.value.started }.sortedByDescending { it.value.at }.take(limit).map { it.key to it.value }

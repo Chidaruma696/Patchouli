@@ -88,6 +88,18 @@ object AniList {
 		query(${'$'}id: Int) { Media(id: ${'$'}id, type: ANIME) { id idMal } }
 	"""
 
+	private const val BY_ID = """
+		query(${'$'}id: Int) {
+			Media(id: ${'$'}id, type: ANIME) {
+				id idMal title { romaji english native } coverImage { large extraLarge } bannerImage
+				description(asHtml: false) episodes seasonYear format averageScore
+			}
+		}
+	"""
+
+	/** One entry by its AniList id, for a folder that says which one it is. */
+	suspend fun byId(id: Int): Anime? = post(BY_ID, buildJsonObject { put("id", id) }).data?.Media?.toAnime()
+
 	private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }
 	private val client: OkHttpClient by lazy {
 		OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()

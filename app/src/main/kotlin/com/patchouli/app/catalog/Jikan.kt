@@ -66,6 +66,13 @@ object Jikan {
 		titles to (parsed.pagination?.has_next_page == true)
 	}
 
+	@Serializable private data class JkOne(val data: JkAnime? = null)
+
+	/** One entry by its MyAnimeList id, for a folder that says which one it is. */
+	suspend fun byId(malId: Int): Anime? = withContext(Dispatchers.IO) {
+		json.decodeFromString<JkOne>(fetch("$URL/$malId")).data?.toAnime()
+	}
+
 	suspend fun search(query: String, limit: Int = 5): List<Anime> = withContext(Dispatchers.IO) {
 		val url = URL.toHttpUrl().newBuilder()
 			.addQueryParameter("q", query.trim())
@@ -73,7 +80,10 @@ object Jikan {
 			.addQueryParameter("sfw", "true")
 			.build()
 		val body = fetch(url.toString())
-		json.decodeFromString<JkResponse>(body).data.map { a ->
+		json.decodeFromString<JkResponse>(body).data.map { it.toAnime() }
+	}
+
+	private fun JkAnime.toAnime(): Anime = let { a ->
 			Anime(
 				id = a.mal_id,
 				source = "mal",
@@ -87,5 +97,4 @@ object Jikan {
 				score = a.score?.let { (it * 10).toInt() },
 			)
 		}
-	}
 }

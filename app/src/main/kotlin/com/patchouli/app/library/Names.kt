@@ -12,9 +12,12 @@ object Names {
 		Regex("""(?<![\dx×])(\d{1,4})(?:\s*\[|\s*\(|\s*$)"""),                                  // Title 03 [1080p]
 	)
 
+	private val extension = Regex("""\.(mp4|mkv|avi|webm|mov|m4v|ts|flv|wmv|3gp|mpg|mpeg)$""", RegexOption.IGNORE_CASE)
+
 	/** The episode number a file name carries, or null when it has none we trust. */
 	fun episode(title: String): Int? {
-		val clean = title.substringBeforeLast('.', title)
+		// only a real extension goes: "Ep. 12" keeps its number
+		val clean = title.replace(extension, "")
 		for (pattern in episodePatterns) {
 			for (match in pattern.findAll(clean)) {
 				val n = match.groupValues[1].toIntOrNull() ?: continue

@@ -166,7 +166,7 @@ object Dlna {
 	private fun tagText(xml: String, tag: String): String? = Regex("<$tag>([^<]*)</$tag>").find(xml)?.groupValues?.get(1)?.trim()
 
 	/** "0:01:23" or "0:01:23.500" to milliseconds; NOT_IMPLEMENTED and the like give null. */
-	private fun parseTime(s: String?): Long? {
+	internal fun parseTime(s: String?): Long? {
 		val parts = s?.takeIf { it.isNotBlank() }?.substringBefore('.')?.split(':') ?: return null
 		if (parts.size != 3) return null
 		val h = parts[0].toLongOrNull() ?: return null

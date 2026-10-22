@@ -27,6 +27,20 @@ class NamesTest {
 	}
 
 	@Test
+	fun episodeFromTheOrganizerAndFromSpanishDownloads() {
+		assertEquals(1, Names.episode("Dark Gathering - E01"))
+		assertEquals(12, Names.episode("Higurashi - Ep. 12"))
+		assertEquals(3, Names.episode("Capitulo 3 (1080p)"))
+		assertEquals(4, Names.episode("Hellsing Ultimate 04"))
+	}
+
+	@Test
+	fun titleDropsTheExtensionOnly() {
+		assertEquals("Fate_Zero - E01", Names.title("Fate_Zero - E01.mp4"))
+		assertEquals("Series.Name.S01E24.1080p", Names.title("Series.Name.S01E24.1080p.mkv"))
+	}
+
+	@Test
 	fun seriesFromFolder() {
 		assertEquals("Fate stay night", Names.series("01 - Fate_stay night"))
 		assertEquals("Higurashi", Names.series("Higurashi"))

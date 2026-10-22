@@ -3,7 +3,10 @@ package com.patchouli.app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
 import android.database.ContentObserver
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -53,6 +56,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Library
+import com.patchouli.app.library.Names
+import com.patchouli.app.library.Progress
 import com.patchouli.app.library.Video
 import com.patchouli.app.player.PlayerActivity
 import com.patchouli.app.ui.AppPrefs
@@ -94,13 +99,22 @@ class MainActivity : ComponentActivity() {
 		}
 	}
 
+	/** The launcher's shortcut asked to play on: honoured once the shelves are read. */
+	var resumeRequested by mutableStateOf(false)
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		WindowCompat.setDecorFitsSystemWindows(window, false)
 		contentResolver.registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, mediaObserver)
+		if (intent?.action == ACTION_RESUME) resumeRequested = true
 		setContent {
 			PatchouliTheme { App() }
 		}
+	}
+
+	override fun onNewIntent(intent: Intent) {
+		super.onNewIntent(intent)
+		if (intent.action == ACTION_RESUME) resumeRequested = true
 	}
 
 	override fun onDestroy() {
@@ -114,25 +128,60 @@ class MainActivity : ComponentActivity() {
 		if (hasPermission() && Library.root != null) lifecycleScope.launch { Library.scan(this@MainActivity) }
 	}
 
+	override fun onPause() {
+		super.onPause()
+		updateShortcut()
+	}
+
+	/** A long press on the icon offers to play on from the last video, named. */
+	private fun updateShortcut() {
+		val manager = getSystemService(ShortcutManager::class.java) ?: return
+		val last = Progress.continueWatching(5).firstNotNullOfOrNull { (path, _) -> Library.videoAt(path) }
+		runCatching {
+			if (last == null) { manager.removeDynamicShortcuts(listOf(SHORTCUT_RESUME)); return }
+			val series = Library.find(last.folderPath)?.let { Names.series(it.name) }
+			val label = last.episode?.let { getString(R.string.episode_short, it) }?.let { if (series != null) "$it · $series" else it } ?: last.title
+			val shortcut = ShortcutInfo.Builder(this, SHORTCUT_RESUME)
+				.setShortLabel(label.take(25))
+				.setLongLabel(getString(R.string.resume_at, label).take(50))
+				.setIcon(Icon.createWithResource(this, R.drawable.ic_play))
+				.setIntent(Intent(this, MainActivity::class.java).setAction(ACTION_RESUME))
+				.build()
+			manager.dynamicShortcuts = listOf(shortcut)
+		}
+	}
+
+	companion object {
+		const val ACTION_RESUME = "com.patchouli.app.RESUME"
+		private const val SHORTCUT_RESUME = "resume"
+	}
+
 	private fun hasPermission(): Boolean =
 		ContextCompat.checkSelfPermission(this, videoPermission()) == PackageManager.PERMISSION_GRANTED
 
-	companion object {
-		fun videoPermission(): String =
-			if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_VIDEO else Manifest.permission.READ_EXTERNAL_STORAGE
-	}
+	fun videoPermission(): String =
+		if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_VIDEO else Manifest.permission.READ_EXTERNAL_STORAGE
 }
 
 @Composable
 private fun App() {
 	val context = LocalContext.current
+	val activity = context as MainActivity
 	val scope = rememberCoroutineScope()
-	val permission = MainActivity.videoPermission()
+	val permission = activity.videoPermission()
 	var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) }
 	val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
 
 	LaunchedEffect(granted) {
 		if (granted && Library.root == null) Library.scan(context)
+	}
+	// the shortcut on the icon: play on from the last video, as soon as the shelves are read
+	LaunchedEffect(activity.resumeRequested, Library.root) {
+		if (!activity.resumeRequested || Library.root == null) return@LaunchedEffect
+		activity.resumeRequested = false
+		val last = Progress.continueWatching(5).firstNotNullOfOrNull { (path, _) -> Library.videoAt(path) } ?: return@LaunchedEffect
+		val playlist = Library.siblingsOf(last)
+		context.startActivity(PlayerActivity.intent(context, playlist.map { it.path }, playlist.indexOf(last).coerceAtLeast(0)))
 	}
 
 	if (!granted) {
