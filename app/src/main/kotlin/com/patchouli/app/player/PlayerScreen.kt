@@ -3,6 +3,7 @@ package com.patchouli.app.player
 import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.provider.Settings
+import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -149,7 +150,9 @@ fun PlayerScreen(activity: PlayerActivity) {
 		val listener = MediaPlayer.EventListener { event ->
 			when (event.type) {
 				MediaPlayer.Event.Opening -> { buffering = true; error = false }
-				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams() }
+				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams(); activity.applyRememberedTracks() }
+				// a track showed up: maybe the one the series was last watched with
+				MediaPlayer.Event.ESAdded -> activity.applyRememberedTracks()
 				MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped -> { isPlaying = false; activity.updatePipParams() }
 				MediaPlayer.Event.Buffering -> buffering = event.buffering < 100f
 				MediaPlayer.Event.PositionChanged -> position = event.positionChanged
@@ -299,6 +302,23 @@ fun PlayerScreen(activity: PlayerActivity) {
 
 		hud?.let { HudView(it) }
 
+		// it picked up where it was left days ago: a caption says so for a while, with the way back to the start
+		activity.staleResume?.let { mark ->
+			LaunchedEffect(mark) { delay(10_000); activity.dismissStaleResume() }
+			Box(Modifier.fillMaxSize().padding(top = 84.dp, start = 16.dp, end = 16.dp), contentAlignment = Alignment.TopCenter) {
+				KitSurface(elevation = KitSurfaceElevation.Raised, screentone = KitScreentone.Corner, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+					Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+						KitText(
+							text = stringResource(R.string.resume_stale, fmtTime(mark.positionMs), DateUtils.getRelativeTimeSpanString(mark.at).toString()),
+							role = KitTextRole.Body, uppercase = false, fontSize = 13.sp, modifier = Modifier.weight(1f, fill = false), maxLines = 2, overflow = TextOverflow.Ellipsis,
+						)
+						KitButton(onClick = { activity.restartFromStart() }, label = stringResource(R.string.resume_restart), size = KitButtonSize.Sm, variant = KitButtonVariant.Outline)
+						KitButton(onClick = { activity.dismissStaleResume() }, label = stringResource(R.string.resume_keep), size = KitButtonSize.Sm)
+					}
+				}
+			}
+		}
+
 		if (locked) {
 			if (unlockVisible) {
 				Box(Modifier.align(Alignment.CenterStart).padding(start = 20.dp)) {
@@ -348,10 +368,10 @@ fun PlayerScreen(activity: PlayerActivity) {
 	when (sheet) {
 		"spu" -> TrackSheet(
 			title = subtitleLabel, tracks = player.spuTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.spuTrack,
-			onSelect = { player.setSpuTrack(it); sheet = null }, onDismiss = { sheet = null },
+			onSelect = { player.setSpuTrack(it); activity.rememberTrack(TrackPrefs.KIND_SUBTITLES, it); sheet = null }, onDismiss = { sheet = null },
 			extra = stringResource(R.string.subtitles_load), onExtra = { activity.pickSubtitle(); sheet = null },
 		)
-		"audio" -> TrackSheet(title = audioLabel, tracks = player.audioTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.audioTrack, onSelect = { player.setAudioTrack(it); sheet = null }, onDismiss = { sheet = null })
+		"audio" -> TrackSheet(title = audioLabel, tracks = player.audioTracks?.toList().orEmpty().map { it.id to it.name }, selected = player.audioTrack, onSelect = { player.setAudioTrack(it); activity.rememberTrack(TrackPrefs.KIND_AUDIO, it); sheet = null }, onDismiss = { sheet = null })
 		"more" -> KitSheet(onDismiss = { sheet = null }, title = activity.title) {
 			KitListContainer {
 				KitListRow(title = stringResource(R.string.speed), showDivider = true)

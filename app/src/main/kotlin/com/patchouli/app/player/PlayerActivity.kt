@@ -70,6 +70,9 @@ class PlayerActivity : ComponentActivity() {
 	/** Subtitle files found next to the current video, in the order they were added. */
 	var subtitleFiles by mutableStateOf<List<File>>(emptyList())
 		private set
+	/** The bookmark this file resumed from when it is old enough that the user may rather start over; null otherwise. */
+	var staleResume by mutableStateOf<Mark?>(null)
+		private set
 
 	/** The file on disk being played, or null when another app handed us a content uri (a TV cannot fetch that). */
 	val currentFile: String? get() = currentPath
@@ -144,8 +147,13 @@ class PlayerActivity : ComponentActivity() {
 			Media(libVlc, path!!)
 		}
 		media.setHWDecoderEnabled(hardware, false)
-		val start = fromMs ?: path?.let { Progress[it] }?.takeIf { AppPrefs.resume && it.started }?.positionMs
+		val mark = path?.let { Progress[it] }?.takeIf { AppPrefs.resume && it.started }
+		val start = fromMs ?: mark?.positionMs
 		if (start != null && start > Mark.RESUME_MIN_MS) media.addOption(":start-time=${start / 1000.0}")
+		// a bookmark left days ago: it resumes, but says so, with a way back to the start
+		staleResume = mark?.takeIf { fromMs == null && System.currentTimeMillis() - it.at > STALE_RESUME_MS }
+		spuApplied = false
+		audioApplied = false
 		player.stop()
 		player.media = media
 		media.release()
@@ -153,6 +161,55 @@ class PlayerActivity : ComponentActivity() {
 		subtitleFiles = path?.let { attachSubtitles(File(it)) }.orEmpty()
 		Log.i(TAG, "play ${path ?: contentUri} hw=$hardware from=$start subs=${subtitleFiles.size}")
 		if (autoplay) player.play()
+	}
+
+	/** The user would rather start this one from the beginning after all. */
+	fun restartFromStart() {
+		staleResume = null
+		player.time = 0
+	}
+
+	fun dismissStaleResume() { staleResume = null }
+
+	// --- tracks remembered by series ---
+
+	private var spuApplied = false
+	private var audioApplied = false
+	private val currentFolder: String? get() = currentPath?.substringBeforeLast('/')
+
+	/** The user picked a track: the series remembers it for the next episode. */
+	fun rememberTrack(kind: String, id: Int) {
+		val folder = currentFolder ?: return
+		val name = if (id == -1) TrackPrefs.OFF else tracksOf(kind).firstOrNull { it.id == id }?.name ?: return
+		TrackPrefs.set(kind, folder, name)
+		if (kind == TrackPrefs.KIND_SUBTITLES) spuApplied = true else audioApplied = true
+	}
+
+	/** Called as tracks appear (libVLC adds them one by one): switches to the ones the series was last watched with. */
+	fun applyRememberedTracks() {
+		val folder = currentFolder ?: return
+		if (!spuApplied) spuApplied = apply(TrackPrefs.KIND_SUBTITLES, TrackPrefs.get(TrackPrefs.KIND_SUBTITLES, folder))
+		if (!audioApplied) audioApplied = apply(TrackPrefs.KIND_AUDIO, TrackPrefs.get(TrackPrefs.KIND_AUDIO, folder))
+	}
+
+	private fun tracksOf(kind: String): List<MediaPlayer.TrackDescription> =
+		(if (kind == TrackPrefs.KIND_SUBTITLES) player.spuTracks else player.audioTracks)?.toList().orEmpty()
+
+	/** True once the wish is met, or there is none; false while the tracks it could match are still to come. */
+	private fun apply(kind: String, wanted: String?): Boolean {
+		if (wanted == null) return true
+		val subtitles = kind == TrackPrefs.KIND_SUBTITLES
+		if (wanted == TrackPrefs.OFF) {
+			if (subtitles) player.setSpuTrack(-1)
+			return true
+		}
+		val hit = tracksOf(kind).filter { it.id != -1 }.firstOrNull { TrackPrefs.matches(it.name, wanted) } ?: return false
+		val current = if (subtitles) player.spuTrack else player.audioTrack
+		if (current != hit.id) {
+			if (subtitles) player.setSpuTrack(hit.id) else player.setAudioTrack(hit.id)
+			Log.i(TAG, "$kind track '${hit.name}' as last time in this folder")
+		}
+		return true
 	}
 
 	// --- subtitles ---
@@ -305,6 +362,8 @@ class PlayerActivity : ComponentActivity() {
 		private const val EXTRA_PLAYLIST = "playlist"
 		private const val EXTRA_INDEX = "index"
 		private const val ACTION_PIP = "com.patchouli.app.PIP_TOGGLE"
+		/** A bookmark older than this is worth a word when it resumes. */
+		private const val STALE_RESUME_MS = 3L * 24 * 3600 * 1000
 		private val SUBTITLE_EXTENSIONS = setOf("srt", "ass", "ssa", "vtt", "sub")
 
 		fun intent(context: Context, playlist: List<String>, index: Int): Intent =
