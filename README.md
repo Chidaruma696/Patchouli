@@ -54,7 +54,7 @@ Grab the APK from the [latest release](https://github.com/Chidaruma696/Patchouli
 
 ## 🎨 Look
 
-The interface is Patchouli's own kit: paper and ink, a serif for the headings, modest corners, no pattern behind the page. Twelve palettes named after Touhou Project characters, each in light and dark; Patchouli's is the default.
+The interface is drawn like a manga page: cream paper with grid lines, square panels with a 3 dp line of ink and a hard shadow that sinks when pressed, tone sheets of dots in the corners, Anton capitals for the headlines, stamps for buttons. The drawing comes from the design system of [Komi Store](https://github.com/kurikomi-labs/komi-store) (Apache 2.0), carried over into Patchouli's kit. Day paper and night paper; ten palettes named after Touhou Project characters lend the accent colour, Patchouli's by default.
 
 <br/>
 
@@ -89,7 +89,10 @@ JDK 17+, Android SDK 36. Release signing reads `keystore.*` from `local.properti
 - [x] Picture in picture: leave the player and it keeps playing in a floating window
 - [x] External subtitles: `.srt`/`.ass`/`.vtt` next to the file are picked up, or load one from anywhere
 - [x] Search inside the library
-- [x] Send to a TV over DLNA: the phone serves the file, the TV plays it where you were, the phone becomes the remote
+- [x] Send to a TV over DLNA: the phone serves the file, the TV plays it where you were, the phone becomes the remote with a seek bar
+- [x] Library as a list or a grid of 2, 3 or 4, inside folders too; a floating play that resumes the last video
+- [x] Sort a folder: number the seasons, name the episodes, with a preview
+- [x] The manga look, after Komi Store
 - [ ] Read an AniList id left in the folder (`anilist.json`) instead of searching by name
 - [ ] Chromecast (Google's Cast SDK; kept out so far to stay free of Play services)
 

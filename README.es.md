@@ -54,7 +54,7 @@ Baja el APK de la [última versión](https://github.com/Chidaruma696/Patchouli/r
 
 ## 🎨 Estética
 
-La interfaz es un kit propio de Patchouli: papel y tinta, una serif para los titulares, esquinas discretas, nada de patrón detrás de la página. Doce paletas con nombres de personajes de Touhou Project, cada una en claro y oscuro; la de Patchouli es la de serie.
+La interfaz está dibujada como una página de manga: papel crema con cuadrícula, paneles cuadrados con una línea de tinta de 3 dp y una sombra dura que se hunde al pulsar, tramas de puntos en las esquinas, mayúsculas en Anton para los titulares, sellos por botones. El dibujo viene del sistema de diseño de [Komi Store](https://github.com/kurikomi-labs/komi-store) (Apache 2.0), traído al kit de Patchouli. Papel de día y papel de noche; diez paletas con nombres de personajes de Touhou Project ponen el color de acento, la de Patchouli de serie.
 
 <br/>
 
@@ -89,7 +89,10 @@ JDK 17+, SDK de Android 36. La firma de release lee `keystore.*` de `local.prope
 - [x] Imagen en imagen: sales del reproductor y sigue en una ventana flotante
 - [x] Subtítulos externos: los `.srt`/`.ass`/`.vtt` junto al archivo se cargan solos, o cargas uno de donde sea
 - [x] Buscar dentro de la biblioteca
-- [x] Mandar a la tele por DLNA: el teléfono sirve el archivo, la tele lo reproduce donde ibas, el teléfono queda de control
+- [x] Mandar a la tele por DLNA: el teléfono sirve el archivo, la tele lo reproduce donde ibas, el teléfono queda de control con barra de avance
+- [x] Biblioteca en lista o en cuadrícula de 2, 3 o 4, también dentro de las carpetas; un play flotante que reanuda el último vídeo
+- [x] Ordenar una carpeta: numera las temporadas, nombra los episodios, con vista previa
+- [x] El aspecto de manga, a la manera de Komi Store
 - [ ] Leer un ID de AniList dejado en la carpeta (`anilist.json`) en vez de buscar por nombre
 - [ ] Chromecast (el Cast SDK de Google; fuera por ahora para no depender de los servicios de Play)
 
