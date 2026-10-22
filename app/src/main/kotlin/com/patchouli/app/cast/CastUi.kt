@@ -11,8 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import com.patchouli.app.ui.kit.KitSlider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -109,14 +108,13 @@ fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: (positionMs: Long) 
 			if (s.error == null && !s.busy && s.durationMs > 0) {
 				val shownMs = dragging?.let { (it * s.durationMs).toLong() } ?: s.positionMs
 				Column(Modifier.fillMaxWidth()) {
-					Slider(
+					KitSlider(
 						value = dragging ?: (s.positionMs.toFloat() / s.durationMs).coerceIn(0f, 1f),
 						onValueChange = { dragging = it },
 						onValueChangeFinished = {
 							dragging?.let { CastService.seek(context, (it * s.durationMs).toLong()) }
 							dragging = null
 						},
-						colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.primary.copy(alpha = 0.25f)),
 					)
 					Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 						KitText(text = fmtTime(shownMs), role = KitTextRole.Mono, color = colors.onSurfaceVariant)

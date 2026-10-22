@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -315,6 +316,44 @@ fun KitDialog(
 			}
 		}
 	}
+}
+
+// ---------------------------------------------------------------- slider
+
+/** A slider drawn with the pen: a square track with a rule of ink around it, the accent filling it, and a stamp for a thumb. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun KitSlider(
+	value: Float,
+	onValueChange: (Float) -> Unit,
+	modifier: Modifier = Modifier,
+	onValueChangeFinished: (() -> Unit)? = null,
+	enabled: Boolean = true,
+) {
+	val colors = LocalPersonality.current.colors
+	Slider(
+		value = value,
+		onValueChange = onValueChange,
+		modifier = modifier,
+		enabled = enabled,
+		onValueChangeFinished = onValueChangeFinished,
+		thumb = {
+			Box(
+				Modifier
+					.size(width = 14.dp, height = 26.dp)
+					.hardShadow(DpOffset(2.dp, 2.dp), colors.shadow)
+					.background(colors.primary)
+					.border(2.dp, colors.outline),
+			)
+		},
+		track = { state ->
+			val range = state.valueRange
+			val fraction = ((state.value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
+			Box(Modifier.fillMaxWidth().height(12.dp).background(colors.surfaceVariant).border(2.dp, colors.outline)) {
+				Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().padding(2.dp).background(colors.primary))
+			}
+		},
+	)
 }
 
 // ---------------------------------------------------------------- progress

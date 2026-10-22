@@ -23,8 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import com.patchouli.app.ui.kit.KitSlider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -500,12 +499,7 @@ private fun Controls(
 		) {
 			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 				KitText(fmtTime(timeMs), role = KitTextRole.Mono, fontSize = 13.sp)
-				Slider(
-					value = position,
-					onValueChange = onSeekTo,
-					modifier = Modifier.weight(1f),
-					colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.surfaceVariant),
-				)
+				KitSlider(value = position, onValueChange = onSeekTo, modifier = Modifier.weight(1f))
 				KitText(
 					text = if (showRemaining) "−" + fmtTime((length - timeMs).coerceAtLeast(0)) else fmtTime(length),
 					role = KitTextRole.Mono, fontSize = 13.sp,
