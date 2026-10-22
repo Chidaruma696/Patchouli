@@ -40,7 +40,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.video.videoFramePercent
 import com.patchouli.app.R
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
@@ -239,9 +242,11 @@ fun LibraryLayoutSheet(onDismiss: () -> Unit) {
 @Composable
 private fun FolderCover(folder: Folder, modifier: Modifier = Modifier, note: Boolean = true) {
 	val colors = LocalPersonality.current.colors
+	val context = LocalContext.current
 	val status = Metadata.status(folder)
 	Box(modifier.background(colors.surfaceVariant)) {
-		val model: Any? = Metadata.cover(folder) ?: folder.firstVideo?.let { File(it.path) }
+		// no cover yet: a frame from inside the first video, not its black opening
+		val model: Any? = Metadata.cover(folder) ?: folder.firstVideo?.let { ImageRequest.Builder(context).data(File(it.path)).videoFramePercent(0.2).build() }
 		if (model != null) {
 			AsyncImage(model = model, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
 		} else {

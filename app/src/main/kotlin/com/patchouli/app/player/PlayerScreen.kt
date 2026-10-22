@@ -66,6 +66,15 @@ import com.patchouli.app.ui.kit.KitSurface
 import com.patchouli.app.ui.kit.KitSurfaceElevation
 import com.patchouli.app.ui.kit.LocalPersonality
 import com.patchouli.app.ui.kit.hardShadow
+import com.patchouli.app.ui.kit.inkPress
+import com.patchouli.app.ui.kit.screentoneCorner
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import com.patchouli.app.ui.kit.KitLinearProgress
 import com.patchouli.app.ui.kit.KitListContainer
@@ -272,7 +281,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 		)
 
 		if (buffering && !error) {
-			Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { KitCircularProgress(color = Color.White) }
+			Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { KitCircularProgress() }
 		}
 		if (error) {
 			// the bad news comes in a panel of the comic, not in white on black
@@ -294,7 +303,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 		if (locked) {
 			if (unlockVisible) {
 				Box(Modifier.align(Alignment.CenterStart).padding(start = 20.dp)) {
-					FlatButton(R.drawable.ic_lock, stringResource(R.string.unlock), size = 52.dp, backed = true) { locked = false; unlockVisible = false; controlsVisible = true }
+					Stamp(R.drawable.ic_lock, stringResource(R.string.unlock), size = 52.dp, iconSize = 26.dp) { locked = false; unlockVisible = false; controlsVisible = true }
 				}
 			}
 		} else if (controlsVisible) {
@@ -406,37 +415,33 @@ private fun HudView(hud: Hud) {
 	}
 }
 
-/** The player's buttons, MX style: a bare white glyph on the dark strip, every one the same box, no discs. */
+/**
+ * A button of the player: a square stamp of paper (of the accent for the play), the pen around it
+ * and a hard shadow it sinks onto, laid out MX style: every one the same box so the rows line up.
+ */
 @Composable
-private fun FlatButton(icon: Int, description: String, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 44.dp, iconSize: androidx.compose.ui.unit.Dp = 26.dp, enabled: Boolean = true, backed: Boolean = false, onClick: () -> Unit) {
+private fun Stamp(icon: Int, description: String, modifier: Modifier = Modifier, size: Dp = 38.dp, iconSize: Dp = 20.dp, accent: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
+	val colors = LocalPersonality.current.colors
+	val interaction = remember { MutableInteractionSource() }
+	val pressed by interaction.collectIsPressedAsState()
+	val press = animateFloatAsState(if (pressed && enabled) 1f else 0f, label = "stampPress")
+	val alpha = if (enabled) 1f else 0.4f
+	val big = size >= 50.dp
+	val shadow = if (big) 5.dp else 3.dp
 	Box(
 		modifier = modifier
+			.inkPress(pressProgress = { press.value }, shadow = DpOffset(shadow, shadow), shadowColor = colors.shadow.copy(alpha = alpha), shape = RectangleShape)
 			.size(size)
-			.clip(CircleShape)
-			// alone on the bare video (the unlock button) it needs a disc to read as a button
-			.background(if (backed) Color.Black.copy(alpha = 0.5f) else Color.Transparent)
-			.clickable(enabled = enabled, interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+			.background(if (accent) colors.primary else colors.surface)
+			.border(if (big) 3.dp else 2.5.dp, colors.outline.copy(alpha = alpha))
+			.clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick),
 		contentAlignment = Alignment.Center,
 	) {
-		Icon(ImageVector.vectorResource(icon), contentDescription = description, tint = Color.White.copy(alpha = if (enabled) 1f else 0.35f), modifier = Modifier.size(iconSize))
+		Icon(ImageVector.vectorResource(icon), contentDescription = description, tint = (if (accent) colors.onPrimary else colors.onSurface).copy(alpha = alpha), modifier = Modifier.size(iconSize))
 	}
 }
 
-/** A word where MX uses one (HW/SW): same box as the glyph buttons so the row lines up. */
-@Composable
-private fun FlatWord(text: String, onClick: () -> Unit) {
-	Box(
-		modifier = Modifier
-			.height(44.dp)
-			.clip(RoundedCornerShape(8.dp))
-			.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
-			.padding(horizontal = 8.dp),
-		contentAlignment = Alignment.Center,
-	) {
-		KitText(text, role = KitTextRole.Mono, color = Color.White, fontSize = 13.sp, maxLines = 1)
-	}
-}
-
+/** The chrome of the player as a comic page: strips of paper over the video, a rule of ink where they meet it, stamps for buttons. */
 @Composable
 private fun Controls(
 	activity: PlayerActivity,
@@ -457,56 +462,67 @@ private fun Controls(
 	onPip: () -> Unit,
 	onCast: (() -> Unit)? = null,
 ) {
+	val colors = LocalPersonality.current.colors
 	Column(Modifier.fillMaxSize()) {
-		// top, MX style: back and title on the left; HW/SW, TV, floating window, subtitles, audio, more on the right
+		// top strip, MX layout on paper: back and title on the left; HW/SW, TV, floating window, subtitles, audio, more on the right
 		Row(
-			modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))).padding(horizontal = 6.dp, vertical = 6.dp),
+			modifier = Modifier
+				.fillMaxWidth()
+				.background(colors.surface)
+				.screentoneCorner(colors.onSurface, colors.screentoneOpacity, boost = 1.3f, regionWidth = 180.dp, regionHeight = 60.dp)
+				.drawBehind { drawRect(colors.outline, topLeft = Offset(0f, size.height - 3.dp.toPx()), size = Size(size.width, 3.dp.toPx())) }
+				.padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 11.dp),
 			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
 		) {
-			FlatButton(R.drawable.ic_back, stringResource(R.string.back)) { activity.finish() }
-			Column(Modifier.weight(1f).padding(start = 4.dp, end = 8.dp)) {
-				KitText(activity.title, role = KitTextRole.Label, color = Color.White, uppercase = false, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
+			Stamp(R.drawable.ic_back, stringResource(R.string.back)) { activity.finish() }
+			Column(Modifier.weight(1f).padding(start = 2.dp, end = 4.dp)) {
+				KitText(activity.title, role = KitTextRole.Stamp, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
 				if (activity.count > 1) {
-					KitText("${activity.index + 1} / ${activity.count}", role = KitTextRole.Mono, color = Color.White.copy(alpha = 0.7f), maxLines = 1)
+					KitText("${activity.index + 1} / ${activity.count}", role = KitTextRole.Mono, color = colors.onSurfaceVariant, maxLines = 1)
 				}
 			}
-			FlatWord(stringResource(if (activity.hardware) R.string.decoder_hw else R.string.decoder_sw)) { activity.toggleDecoder() }
-			if (onCast != null) FlatButton(R.drawable.ic_cast, stringResource(R.string.cast_to_tv), onClick = onCast)
-			FlatButton(R.drawable.ic_pip, stringResource(R.string.pip_enter), onClick = onPip)
-			FlatButton(R.drawable.ic_subtitles, stringResource(R.string.subtitles), onClick = onSubtitles)
-			FlatButton(R.drawable.ic_audio, stringResource(R.string.audio_tracks), onClick = onAudio)
-			FlatButton(R.drawable.ic_more, stringResource(R.string.more), onClick = onMore)
+			KitButton(onClick = { activity.toggleDecoder() }, label = stringResource(if (activity.hardware) R.string.decoder_hw else R.string.decoder_sw), size = KitButtonSize.Sm, variant = KitButtonVariant.Outline)
+			if (onCast != null) Stamp(R.drawable.ic_cast, stringResource(R.string.cast_to_tv), onClick = onCast)
+			Stamp(R.drawable.ic_pip, stringResource(R.string.pip_enter), onClick = onPip)
+			Stamp(R.drawable.ic_subtitles, stringResource(R.string.subtitles), onClick = onSubtitles)
+			Stamp(R.drawable.ic_audio, stringResource(R.string.audio_tracks), onClick = onAudio)
+			Stamp(R.drawable.ic_more, stringResource(R.string.more), onClick = onMore)
 		}
 		Spacer(Modifier.weight(1f))
-		// bottom: times and slider, then lock | prev play next | aspect rotate, all on one line
+		// bottom strip: times and slider, then lock | prev play next | aspect rotate, all on one line
 		Column(
-			modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))).padding(horizontal = 10.dp, vertical = 4.dp),
+			modifier = Modifier
+				.fillMaxWidth()
+				.background(colors.surface)
+				.drawBehind { drawRect(colors.outline, size = Size(size.width, 3.dp.toPx())) }
+				.padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 10.dp),
 		) {
-			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(horizontal = 6.dp)) {
-				KitText(fmtTime(timeMs), role = KitTextRole.Mono, color = Color.White, fontSize = 13.sp)
+			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+				KitText(fmtTime(timeMs), role = KitTextRole.Mono, fontSize = 13.sp)
 				Slider(
 					value = position,
 					onValueChange = onSeekTo,
 					modifier = Modifier.weight(1f),
-					colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
+					colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.surfaceVariant),
 				)
 				KitText(
 					text = if (showRemaining) "−" + fmtTime((length - timeMs).coerceAtLeast(0)) else fmtTime(length),
-					role = KitTextRole.Mono, color = Color.White, fontSize = 13.sp,
+					role = KitTextRole.Mono, fontSize = 13.sp,
 					modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onToggleRemaining),
 				)
 			}
-			Box(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-				FlatButton(R.drawable.ic_lock, stringResource(R.string.lock), modifier = Modifier.align(Alignment.CenterStart), onClick = onLock)
-				// the three in the exact middle of the screen, whatever sits at the sides
-				Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.align(Alignment.Center)) {
-					FlatButton(R.drawable.ic_prev, stringResource(R.string.previous), enabled = activity.hasPrevious) { activity.previous() }
-					FlatButton(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play, stringResource(if (isPlaying) R.string.pause else R.string.play), size = 64.dp, iconSize = 44.dp, onClick = onPlayPause)
-					FlatButton(R.drawable.ic_next, stringResource(R.string.next), enabled = activity.hasNext) { activity.next() }
+			Box(Modifier.fillMaxWidth().padding(top = 2.dp)) {
+				Stamp(R.drawable.ic_lock, stringResource(R.string.lock), modifier = Modifier.align(Alignment.CenterStart), onClick = onLock)
+				// the three in the exact middle of the screen, whatever sits at the sides; the play is the big stamp of the accent
+				Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.align(Alignment.Center)) {
+					Stamp(R.drawable.ic_prev, stringResource(R.string.previous), size = 42.dp, iconSize = 22.dp, enabled = activity.hasPrevious) { activity.previous() }
+					Stamp(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play, stringResource(if (isPlaying) R.string.pause else R.string.play), size = 58.dp, iconSize = 34.dp, accent = true, onClick = onPlayPause)
+					Stamp(R.drawable.ic_next, stringResource(R.string.next), size = 42.dp, iconSize = 22.dp, enabled = activity.hasNext) { activity.next() }
 				}
-				Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterEnd)) {
-					FlatButton(R.drawable.ic_aspect, scaleLabel, onClick = onAspect)
-					FlatButton(R.drawable.ic_rotate, stringResource(R.string.rotate)) { activity.cycleOrientation() }
+				Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.CenterEnd)) {
+					Stamp(R.drawable.ic_aspect, scaleLabel, onClick = onAspect)
+					Stamp(R.drawable.ic_rotate, stringResource(R.string.rotate)) { activity.cycleOrientation() }
 				}
 			}
 		}

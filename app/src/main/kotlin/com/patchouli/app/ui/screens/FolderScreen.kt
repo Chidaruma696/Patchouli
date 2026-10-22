@@ -34,7 +34,10 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.video.videoFramePercent
 import com.patchouli.app.R
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
@@ -195,7 +198,8 @@ fun VideoRow(video: Video, showDivider: Boolean, onClick: () -> Unit) {
 		showDivider = showDivider,
 		trailing = {
 			Box(Modifier.width(96.dp).aspectRatio(16f / 9f).background(Color.Black).border(2.dp, colors.outline)) {
-				AsyncImage(model = File(video.path), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+				// a frame from well inside the episode: the first one is black more often than not
+				AsyncImage(model = ImageRequest.Builder(LocalContext.current).data(File(video.path)).videoFramePercent(0.2).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
 				if (mark != null && mark.fraction > 0f) {
 					KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp))
 				}
