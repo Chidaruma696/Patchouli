@@ -57,6 +57,18 @@ object AppPrefs {
 	const val SKIP_AUTO = "auto"
 	const val SKIP_NEVER = "never"
 
+	/** How big the subtitles are drawn, as libVLC's relative font size: the smaller the number, the bigger the text. Takes effect when the player opens. */
+	var subtitleSize by mutableStateOf(SUBS_NORMAL)
+		private set
+	/** Write every episode watched to the end on the user's AniList list (when an account is connected). */
+	var anilistSync by mutableStateOf(true)
+		private set
+
+	const val SUBS_SMALL = 20
+	const val SUBS_NORMAL = 16
+	const val SUBS_LARGE = 12
+	const val SUBS_HUGE = 8
+
 	fun init(context: Context) {
 		val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 		rootPath = p.getString("root_path", "") ?: ""
@@ -71,6 +83,8 @@ object AppPrefs {
 		librarySort = p.getString("library_sort", SORT_NAME) ?: SORT_NAME
 		hideWatched = p.getBoolean("hide_watched", false)
 		skipMode = p.getString("skip_mode", SKIP_BUTTON) ?: SKIP_BUTTON
+		subtitleSize = p.getInt("subtitle_size", SUBS_NORMAL)
+		anilistSync = p.getBoolean("anilist_sync", true)
 	}
 
 	private fun prefs() = PatchouliApp.instance.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -85,6 +99,8 @@ object AppPrefs {
 	fun updateLibrarySort(value: String) { librarySort = value; prefs().edit { putString("library_sort", value) } }
 	fun updateHideWatched(value: Boolean) { hideWatched = value; prefs().edit { putBoolean("hide_watched", value) } }
 	fun updateSkipMode(value: String) { skipMode = value; prefs().edit { putString("skip_mode", value) } }
+	fun updateSubtitleSize(value: Int) { subtitleSize = value; prefs().edit { putInt("subtitle_size", value) } }
+	fun updateAnilistSync(value: Boolean) { anilistSync = value; prefs().edit { putBoolean("anilist_sync", value) } }
 	fun updateRootPath(value: String) {
 		rootPath = value.trim('/')
 		rootChosen = true

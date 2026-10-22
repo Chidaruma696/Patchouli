@@ -7,6 +7,7 @@ import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import com.patchouli.app.catalog.AniListSync
 import com.patchouli.app.catalog.AniSkip
 import com.patchouli.app.catalog.Episodes
 import com.patchouli.app.catalog.Metadata
@@ -27,6 +28,7 @@ class PatchouliApp : Application(), SingletonImageLoader.Factory {
 		Episodes.init(this)
 		AniSkip.init(this)
 		TrackPrefs.init(this)
+		AniListSync.init(this)
 	}
 
 	/** Covers come from the network; thumbnails are frames pulled out of the files themselves. */

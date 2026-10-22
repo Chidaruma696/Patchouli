@@ -54,7 +54,10 @@ data class Anime(
 	val averageScore: Int? = null,
 )
 @Serializable private data class AlPage(val media: List<AlMedia> = emptyList())
-@Serializable private data class AlData(val Page: AlPage? = null, val Media: AlMedia? = null)
+@Serializable private data class AlListEntry(val progress: Int? = null, val status: String? = null)
+@Serializable private data class AlListMedia(val id: Int, val episodes: Int? = null, val mediaListEntry: AlListEntry? = null)
+@Serializable private data class AlViewer(val name: String? = null)
+@Serializable private data class AlData(val Page: AlPage? = null, val Media: AlMedia? = null, val Viewer: AlViewer? = null, val list: AlListMedia? = null)
 @Serializable private data class AlError(val message: String? = null)
 @Serializable private data class AlResponse(val data: AlData? = null, val errors: List<AlError> = emptyList())
 
@@ -103,6 +106,31 @@ object AniList {
 		return post(MAL_ID, vars).data?.Media?.idMal
 	}
 
+	// --- the user's own list (needs a token) ---
+
+	private const val VIEWER = """query { Viewer { name } }"""
+	private const val LIST_ENTRY = """
+		query(${'$'}id: Int, ${'$'}mal: Int) { list: Media(id: ${'$'}id, idMal: ${'$'}mal, type: ANIME) { id episodes mediaListEntry { progress status } } }
+	"""
+	private const val SAVE_PROGRESS = """
+		mutation(${'$'}id: Int, ${'$'}p: Int, ${'$'}s: MediaListStatus) { SaveMediaListEntry(mediaId: ${'$'}id, progress: ${'$'}p, status: ${'$'}s) { id } }
+	"""
+
+	/** The name of the account a token belongs to. */
+	suspend fun viewerName(token: String): String? = post(VIEWER, buildJsonObject {}, token).data?.Viewer?.name
+
+	/**
+	 * Writes an episode as watched on the user's list, by AniList id or by MAL id: progress moves
+	 * only forward, the status becomes "watching", or "completed" with the last episode.
+	 */
+	suspend fun setProgress(token: String, anilistId: Int?, malId: Int?, episode: Int) {
+		val found = post(LIST_ENTRY, buildJsonObject { anilistId?.let { put("id", it) }; malId?.let { put("mal", it) } }, token).data?.list ?: error("AniList: unknown media")
+		val current = found.mediaListEntry?.progress ?: 0
+		if (current >= episode && found.mediaListEntry?.status != "PLANNING") return
+		val status = if (found.episodes != null && episode >= found.episodes) "COMPLETED" else "CURRENT"
+		post(SAVE_PROGRESS, buildJsonObject { put("id", found.id); put("p", episode); put("s", status) }, token)
+	}
+
 	private fun AlMedia.toAnime() = Anime(
 		id = id,
 		idMal = idMal,
@@ -117,7 +145,7 @@ object AniList {
 		score = averageScore,
 	)
 
-	private suspend fun post(query: String, variables: JsonObject): AlResponse = withContext(Dispatchers.IO) {
+	private suspend fun post(query: String, variables: JsonObject, token: String? = null): AlResponse = withContext(Dispatchers.IO) {
 		val payload = buildJsonObject { put("query", query); put("variables", variables) }.toString()
 		repeat(RETRIES + 1) { attempt ->
 			gate.withLock {
@@ -129,6 +157,7 @@ object AniList {
 				.header("Accept", "application/json")
 				// OkHttp's own user agent gets a 403 from AniList's edge; a browser-shaped one does not
 				.header("User-Agent", USER_AGENT)
+				.apply { if (token != null) header("Authorization", "Bearer $token") }
 				.post(payload.toRequestBody("application/json".toMediaType()))
 				.build()
 			val (code, retryAfter, body) = client.newCall(request).execute().use { r -> Triple(r.code, r.header("Retry-After")?.toLongOrNull(), r.body.string()) }

@@ -21,6 +21,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,9 +36,13 @@ import androidx.compose.ui.unit.sp
 import com.patchouli.app.BuildConfig
 import com.patchouli.app.R
 import androidx.compose.ui.platform.LocalContext
+import com.patchouli.app.catalog.AniListSync
 import com.patchouli.app.library.Organizer
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.rememberRootPicker
+import com.patchouli.app.ui.kit.KitButton
+import com.patchouli.app.ui.kit.KitButtonSize
+import com.patchouli.app.ui.kit.KitButtonVariant
 import com.patchouli.app.ui.kit.KitCheckbox
 import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitListRow
@@ -113,8 +121,25 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 				height = 34.dp,
 				fillWidth = true,
 			)
+			KitListRow(title = stringResource(R.string.subtitle_size), subtitle = stringResource(R.string.subtitle_size_summary))
+			KitSegmented(
+				selected = AppPrefs.subtitleSize,
+				items = listOf(
+					KitSegmentedItem(AppPrefs.SUBS_SMALL, stringResource(R.string.size_small)),
+					KitSegmentedItem(AppPrefs.SUBS_NORMAL, stringResource(R.string.size_normal)),
+					KitSegmentedItem(AppPrefs.SUBS_LARGE, stringResource(R.string.size_large)),
+					KitSegmentedItem(AppPrefs.SUBS_HUGE, stringResource(R.string.size_huge)),
+				),
+				onSelect = { AppPrefs.updateSubtitleSize(it) },
+				modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 12.dp),
+				height = 34.dp,
+				fillWidth = true,
+			)
 			KitListRow(title = stringResource(R.string.gestures), subtitle = stringResource(R.string.gestures_summary))
 		}
+
+		KitSectionHead(label = "AniList", kicker = "同期")
+		AniListSection()
 
 		KitSectionHead(label = stringResource(R.string.library_section), kicker = "書庫")
 		val pickRoot = rememberRootPicker()
@@ -152,6 +177,37 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 			role = KitTextRole.Stamp, color = colors.onSurfaceVariant, fontSize = 11.sp, uppercase = false, textAlign = TextAlign.Center,
 			modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
 		)
+	}
+}
+
+/** The user's AniList account: connect, what it is used for, disconnect. */
+@Composable
+private fun AniListSection() {
+	val colors = LocalPersonality.current.colors
+	var login by remember { mutableStateOf(false) }
+	if (login) AniListLogin(onDismiss = { login = false }, onConnected = { login = false })
+	KitListContainer {
+		if (AniListSync.connected) {
+			KitListRow(
+				title = stringResource(R.string.anilist_connected, AniListSync.userName.orEmpty()),
+				subtitle = if (AniListSync.pendingCount > 0) stringResource(R.string.anilist_pending, AniListSync.pendingCount) else stringResource(R.string.anilist_connected_summary),
+				showDivider = true,
+				trailing = { KitButton(onClick = { AniListSync.disconnect() }, label = stringResource(R.string.anilist_disconnect), size = KitButtonSize.Sm, variant = KitButtonVariant.Outline) },
+			)
+			KitListRow(
+				title = stringResource(R.string.anilist_sync),
+				subtitle = stringResource(R.string.anilist_sync_summary),
+				onClick = { AppPrefs.updateAnilistSync(!AppPrefs.anilistSync) },
+				trailing = { KitCheckbox(checked = AppPrefs.anilistSync, onCheckedChange = { AppPrefs.updateAnilistSync(it) }) },
+			)
+		} else {
+			KitListRow(
+				title = stringResource(R.string.anilist_connect),
+				subtitle = stringResource(if (AniListSync.configured) R.string.anilist_connect_summary else R.string.anilist_not_configured),
+				enabled = AniListSync.configured,
+				onClick = { if (AniListSync.configured) login = true },
+			)
+		}
 	}
 }
 
