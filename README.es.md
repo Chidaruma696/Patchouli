@@ -17,6 +17,11 @@
 <img src="https://img.shields.io/badge/licencia-Apache_2.0-blue" alt="">
 </p>
 
+<p align="center">
+<img src="docs/library.png" width="240" alt="La biblioteca: carátulas sobre papel crema"> &nbsp; <img src="docs/settings.png" width="240" alt="Ajustes: paletas y reproducción">
+</p>
+<p align="center"><img src="docs/player.png" width="500" alt="El reproductor: tiras de papel sobre el vídeo, sellos por botones"></p>
+
 <br/>
 
 ## 📖 Qué es
@@ -25,7 +30,7 @@ MX Player era el reproductor de cualquiera con una carpeta de episodios; luego l
 
 | La biblioteca | El reproductor | El motor |
 | --- | --- | --- |
-| Todos los vídeos del teléfono, agrupados por carpeta. Una carpeta con episodios recibe su carátula, año y sinopsis de AniList; una con temporadas se vuelve una estantería. «Seguir viendo» arriba del todo. | Brillo a la izquierda, volumen a la derecha, arrastrar de lado para buscar, doble toque para saltar, mantener para 2×, pellizco para el zoom. Bloqueo, aspecto, pistas de subtítulos y audio, velocidad, cambio de decodificador. | libVLC: decodificación por hardware con caída a software, así que el MKV que nada abre aquí se ve. |
+| Todos los vídeos del teléfono, agrupados por carpeta, en lista o en cuadrícula. Una carpeta con episodios recibe su carátula, año, sinopsis y nombres de episodio de los catálogos; una con temporadas se vuelve una estantería. Un play flotante reanuda el último vídeo. Visto a mano, ocultar lo visto, ordenar, borrar lo ya visto. | Brillo a la izquierda, volumen a la derecha, arrastrar de lado para buscar con vista previa, doble toque para saltar, mantener para 2×, pellizco para el zoom. Saltar el opening y el ending. Pistas recordadas por serie, retrasos, temporizador, volumen extra, capítulos, fotogramas, la tele por DLNA. | libVLC: decodificación por hardware con caída a software, así que el MKV que nada abre aquí se ve. Botones de auriculares y Bluetooth, audio focus, ajuste del refresco, nivelar el volumen. |
 
 Una carpeta organizada como `Franquicia/01 - Serie/Serie - E01.mp4` se lee como un árbol (la franquicia, luego sus series en orden, luego los episodios), pero cualquier carpeta de vídeos funciona igual.
 
@@ -33,7 +38,7 @@ Una carpeta organizada como `Franquicia/01 - Serie/Serie - E01.mp4` se lee como 
 
 ## 📲 Descargar
 
-Baja el APK de la [última versión](https://github.com/Chidaruma696/Patchouli/releases/latest) e instálalo. Android 8.0 o más nuevo. La app pide permiso para leer tus vídeos y nada más; lo único que sale del teléfono es el nombre de una carpeta cuando le pide la carátula a AniList (y eso se puede apagar).
+Baja el APK de la [última versión](https://github.com/Chidaruma696/Patchouli/releases/latest) e instálalo. Android 8.0 o más nuevo. La app pide permiso para leer tus vídeos y nada más. Lo que sale del teléfono: el nombre de una carpeta, para buscar su carátula (AniList, si no Jikan, si no Kitsu); un id de serie y un número de episodio, para los nombres de los episodios (Jikan) y para saber dónde están el opening y el ending (AniSkip); todo eso se apaga con un interruptor en Ajustes. Tu lista de AniList solo se escribe si conectas una cuenta, y solo con los episodios que terminas.
 
 <br/>
 
@@ -62,7 +67,8 @@ La interfaz está dibujada como una página de manga: papel crema con cuadrícul
 
 - **Biblioteca.** Una consulta al MediaStore da todos los vídeos con su ruta y duración; la app arma un árbol de carpetas a partir de las rutas. Las cadenas de carpetas con una sola hija se colapsan (`Movies/Anime` se lee «Anime»). Los números de episodio salen del nombre del archivo (`E01`, `- 03`, `03 Título`, `Título 03 [1080p]`).
 - **Carátulas.** El nombre de cada carpeta, sin su prefijo `01 - ` ni guiones bajos, se busca una vez en AniList (sin clave). La respuesta se guarda en disco; los nombres comunes (Camera, Download…) nunca se buscan, y cualquier carpeta se puede marcar «no es una serie».
-- **Progreso.** Posición y duración de cada archivo visto, en SharedPreferences. Pasado el 95 % cuenta como visto; por debajo aparece en «Seguir viendo» y se abre donde se quedó.
+- **Progreso.** Posición y duración de cada archivo visto, en SharedPreferences. Pasado el 95 % cuenta como visto; por debajo, el play flotante lo reanuda donde se quedó. Todo lo recordado se puede guardar en un JSON y restaurar en otro teléfono.
+- **Openings y endings.** A AniSkip se le pregunta una vez por episodio, por id de MyAnimeList y número, y contesta para el corte del episodio cuya duración coincide con el archivo; los capítulos propios del archivo llamados «OP» o «ED» hacen de respaldo cuando no tiene nada.
 - **Reproductor.** `PlayerActivity` tiene a libVLC; `PlayerScreen` es Compose sobre un `VLCVideoLayout`. Todos los gestos viven en un solo detector de entrada para que nunca se peleen.
 
 <br/>
@@ -93,7 +99,14 @@ JDK 17+, SDK de Android 36. La firma de release lee `keystore.*` de `local.prope
 - [x] Biblioteca en lista o en cuadrícula de 2, 3 o 4, también dentro de las carpetas; un play flotante que reanuda el último vídeo
 - [x] Ordenar una carpeta: numera las temporadas, nombra los episodios, con vista previa
 - [x] El aspecto de manga, a la manera de Komi Store
-- [ ] Leer un ID de AniList dejado en la carpeta (`anilist.json`) en vez de buscar por nombre
+- [x] Leer un ID de AniList dejado en la carpeta (`anilist.json`, con `anilist` y/o `mal`) en vez de buscar por nombre
+- [x] Nombres de episodio, visto a mano, ordenar y ocultar lo visto, pistas recordadas por serie, ficha de siguiente episodio
+- [x] Saltar openings y endings: AniSkip, o los capítulos del archivo
+- [x] Temporizador, retraso de subtítulos y audio, tamaño y estilo de subtítulos, volumen extra, capítulos, fotogramas, vista previa al buscar
+- [x] Botones de auriculares y Bluetooth, audio focus, ajuste del refresco, nivelar el volumen
+- [x] Copia de seguridad y restaurar, borrar episodios vistos, atajo «seguir viendo» en el icono
+- [x] Progreso a AniList (necesita registrar el id de cliente de la app)
+- [ ] Un NAS como fuente: navegar una carpeta compartida por SMB y reproducir desde ahí, con las mismas estanterías y marcas que en el teléfono
 - [ ] Chromecast (el Cast SDK de Google; fuera por ahora para no depender de los servicios de Play)
 
 <br/>

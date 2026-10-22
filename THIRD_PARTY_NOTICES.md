@@ -14,7 +14,10 @@ Under the LGPL 2.1, libVLC is used as a dynamic library without modifications. I
 
 | Component | Use in Patchouli | License / terms |
 | --- | --- | --- |
-| [AniList](https://anilist.co) GraphQL API | Covers, titles and summaries for the folders, looked up by name | [AniList terms](https://anilist.co/terms) |
+| [AniList](https://anilist.co) GraphQL API | Covers, titles and summaries for the folders, looked up by name; the user's own list, when an account is connected | [AniList terms](https://anilist.co/terms) |
+| [Jikan](https://jikan.moe) (unofficial MyAnimeList API) | Covers when AniList is down; the names of the episodes | MIT (the API); MyAnimeList data under [its terms](https://myanimelist.net/about/terms_of_use) |
+| [Kitsu](https://kitsu.io) API | Covers when the other two are down | [Kitsu terms](https://kitsu.io/terms) |
+| [AniSkip](https://api.aniskip.com) | Where the openings and endings are, by series and episode, as marked by its users | [AniSkip](https://github.com/lexesjan/aniskip-extension), MIT |
 
 ## Art
 
@@ -41,6 +44,7 @@ The colour palettes are Patchouli's own. Their names are characters of Touhou Pr
 | Component | License |
 | --- | --- |
 | [OkHttp](https://github.com/square/okhttp) | Apache 2.0 |
+| [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) (the small server a TV fetches the video from) | BSD 3-Clause |
 | [Coil](https://github.com/coil-kt/coil) (with `coil-video` for the thumbnails) | Apache 2.0 |
 | [Jetpack Compose and AndroidX](https://developer.android.com/jetpack) | Apache 2.0 |
 | [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines), [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) | Apache 2.0 |
@@ -48,6 +52,8 @@ The colour palettes are Patchouli's own. Their names are characters of Touhou Pr
 ## License texts
 
 - Apache License 2.0: <https://www.apache.org/licenses/LICENSE-2.0>
+- BSD 3-Clause: <https://opensource.org/license/bsd-3-clause>
+- MIT: <https://opensource.org/license/mit>
 - Creative Commons Attribution-NonCommercial 3.0: <https://creativecommons.org/licenses/by-nc/3.0/legalcode>
 - GNU Lesser General Public License 2.1: <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>
 - SIL Open Font License 1.1: <https://openfontlicense.org/open-font-license-official-text/>

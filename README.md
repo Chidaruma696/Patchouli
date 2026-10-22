@@ -17,6 +17,11 @@
 <img src="https://img.shields.io/badge/license-Apache_2.0-blue" alt="">
 </p>
 
+<p align="center">
+<img src="docs/library.png" width="240" alt="The library: covers on cream paper"> &nbsp; <img src="docs/settings.png" width="240" alt="Settings: palettes and playback">
+</p>
+<p align="center"><img src="docs/player.png" width="500" alt="The player: strips of paper over the video, stamps for buttons"></p>
+
 <br/>
 
 ## 📖 What it is
@@ -25,7 +30,7 @@ MX Player used to be the player for everybody with a folder of episodes; then th
 
 | The library | The player | The engine |
 | --- | --- | --- |
-| Every video on the phone, grouped by folder. A folder with episodes gets its cover, year and synopsis from AniList; a folder with seasons becomes a shelf. "Continue watching" at the top. | Brightness on the left, volume on the right, drag sideways to seek, double tap to skip, hold for 2×, pinch to zoom. Lock, aspect ratio, subtitle and audio tracks, playback speed, decoder switch. | libVLC: hardware decoding with a software fallback, so the MKV that nothing else opens plays here. |
+| Every video on the phone, grouped by folder, as a list or a grid. A folder with episodes gets its cover, year, synopsis and episode names from the catalogues; a folder with seasons becomes a shelf. A floating play resumes the last video. Watched marks by hand, hide the watched, sort, delete what is seen. | Brightness on the left, volume on the right, drag sideways to seek with a frame preview, double tap to skip, hold for 2×, pinch to zoom. Skip the opening and the ending. Tracks remembered per series, delays, sleep timer, extra volume, chapters, snapshots, a TV over DLNA. | libVLC: hardware decoding with a software fallback, so the MKV that nothing else opens plays here. Headphone and Bluetooth buttons, audio focus, refresh-rate matching, audio levelling. |
 
 A folder laid out as `Franchise/01 - Series/Series - E01.mp4` reads as a tree (the franchise, then its series in order, then the episodes), but any folder of videos works the same.
 
@@ -33,7 +38,7 @@ A folder laid out as `Franchise/01 - Series/Series - E01.mp4` reads as a tree (t
 
 ## 📲 Download
 
-Grab the APK from the [latest release](https://github.com/Chidaruma696/Patchouli/releases/latest) and install it. Android 8.0 or newer. The app asks for permission to read your videos and nothing else; the only thing that leaves the phone is the name of a folder when it asks AniList for a cover (and that can be turned off).
+Grab the APK from the [latest release](https://github.com/Chidaruma696/Patchouli/releases/latest) and install it. Android 8.0 or newer. The app asks for permission to read your videos and nothing else. What leaves the phone: the name of a folder, to find its cover (AniList, else Jikan, else Kitsu); a series id and an episode number, for the episode names (Jikan) and for where the opening and ending are (AniSkip); all of that goes away with one switch in Settings. Your AniList list is written only if you connect an account, and only with the episodes you finish.
 
 <br/>
 
@@ -62,7 +67,8 @@ The interface is drawn like a manga page: cream paper with grid lines, square pa
 
 - **Library.** One query to the MediaStore gives every video with its path and duration; the app builds a tree of folders from the paths. Chains of folders with a single child collapse (`Movies/Anime` reads as "Anime"). Episode numbers come from the file names (`E01`, `- 03`, `03 Title`, `Title 03 [1080p]`).
 - **Covers.** Each folder name, cleaned of its `01 - ` prefix and underscores, is searched once on AniList (no key needed). The answer is cached on disk; common folder names (Camera, Download…) are never looked up, and any folder can be marked "not a series".
-- **Progress.** Position and length of every file watched, in SharedPreferences. A file is "watched" past 95 %; below that it shows in "Continue watching" and opens where it was left.
+- **Progress.** Position and length of every file watched, in SharedPreferences. A file is "watched" past 95 %; below that the floating play button resumes it where it was left. Everything remembered can be backed up to a JSON file and restored on another phone.
+- **Openings and endings.** AniSkip is asked once per episode, by MyAnimeList id and episode number, and answers for the cut of the episode whose length matches the file; the file's own chapters named "OP" or "ED" stand in when it has nothing.
 - **Player.** `PlayerActivity` holds libVLC; `PlayerScreen` is Compose over a `VLCVideoLayout`. All gestures live in one pointer-input detector so they never fight each other.
 
 <br/>
@@ -93,7 +99,14 @@ JDK 17+, Android SDK 36. Release signing reads `keystore.*` from `local.properti
 - [x] Library as a list or a grid of 2, 3 or 4, inside folders too; a floating play that resumes the last video
 - [x] Sort a folder: number the seasons, name the episodes, with a preview
 - [x] The manga look, after Komi Store
-- [ ] Read an AniList id left in the folder (`anilist.json`) instead of searching by name
+- [x] Read an AniList id left in the folder (`anilist.json`, with `anilist` and/or `mal`) instead of searching by name
+- [x] Episode names, watched marks by hand, sort and hide the watched, tracks remembered per series, next-episode card
+- [x] Skip openings and endings: AniSkip, or the file's chapters
+- [x] Sleep timer, subtitle and audio delay, subtitle size and style, extra volume, chapters, snapshots, frame preview while seeking
+- [x] Headphone and Bluetooth buttons, audio focus, refresh-rate matching, audio levelling
+- [x] Backup and restore, delete watched episodes, a "play on" shortcut on the icon
+- [x] AniList progress sync (needs the app's client id to be registered)
+- [ ] A NAS as a source: browse an SMB share and play from it, the shelves and the bookmarks the same as on the phone
 - [ ] Chromecast (Google's Cast SDK; kept out so far to stay free of Play services)
 
 <br/>

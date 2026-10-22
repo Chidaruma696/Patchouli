@@ -1,0 +1,9 @@
+Patchouli reproduce los archivos de vídeo del teléfono y recuerda por dónde vas en cada serie. Tus carpetas son la biblioteca; los gestos, los de MX Player; el motor, libVLC, así que el MKV que nada abre aquí se ve.
+
+La biblioteca: todos los vídeos del teléfono, agrupados por carpeta, en lista o en cuadrícula. Una carpeta con episodios recibe su carátula, año, sinopsis y nombres de episodio de AniList y MyAnimeList; una con temporadas se vuelve una estantería. Un play flotante reanuda el último vídeo dejado a medias. Marca episodios como vistos a mano, oculta lo visto, ordena por nombre o por lo último que viste, borra los episodios vistos para hacer sitio.
+
+El reproductor: brillo a la izquierda, volumen a la derecha, arrastrar de lado para buscar con vista previa del fotograma, doble toque para saltar, mantener para 2×, pellizco para el zoom. Salta el opening y el ending con un toque (AniSkip, o los capítulos del archivo). Pistas de subtítulos y audio recordadas por serie, subtítulos externos, retraso de subtítulos y audio, temporizador de apagado, volumen extra, imagen en imagen, mandar a la tele por DLNA con barra de avance. Los botones de los auriculares y del Bluetooth funcionan; una llamada lo pausa.
+
+Opcional: conecta una cuenta de AniList y cada episodio visto hasta el final se apunta en tu lista.
+
+Toda la interfaz está dibujada como un manga: papel crema, líneas de tinta, sombras duras, sellos por botones. Sin anuncios, sin rastreo, sin cuenta. Apache 2.0.

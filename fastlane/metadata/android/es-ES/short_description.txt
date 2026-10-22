@@ -1,0 +1,1 @@
+Un reproductor para el anime que ya tienes en el teléfono, dibujado como una página de manga.
