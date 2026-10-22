@@ -146,11 +146,42 @@ class PlayerActivity : ComponentActivity() {
 		player.volume = volumeBoost
 	}
 
+	// --- what the system does for the picture and the sound ---
+
+	private var audioSessionId = 0
+	private var normalizer: android.media.audiofx.DynamicsProcessing? = null
+	/** libVLC's video surface inside the layout, once attached; for the refresh rate and the snapshot. */
+	var videoSurface: android.view.SurfaceView? = null
+
+	/** The next file of the folder, for the "next episode" card. */
+	val nextPath: String? get() = playlist.getOrNull(index + 1)
+
+	/** Saves what is on the screen as a picture; the HUD says how it went through [onDone]. */
+	fun snapshot(onDone: (Boolean) -> Unit) {
+		val surface = videoSurface ?: run { onDone(false); return }
+		val name = "$title ${com.patchouli.app.ui.screens.fmtTime(player.time.coerceAtLeast(0)).replace(':', '.')}"
+		Extras.snapshot(this, surface, name, onDone)
+	}
+
+	private fun applyNormalizer() {
+		val wanted = AppPrefs.normalizeAudio
+		if (wanted && normalizer == null) normalizer = Extras.normalizer(audioSessionId)
+		normalizer?.enabled = wanted
+	}
+
 	/** Called once the file plays: the delays and the volume of this sitting apply to it, and its chapters are read. */
 	fun onPlayingStarted() {
 		if (subtitleDelayMs != 0L) player.setSpuDelay(subtitleDelayMs * 1000)
 		if (audioDelayMs != 0L) player.setAudioDelay(audioDelayMs * 1000)
 		if (volumeBoost != 100) player.volume = volumeBoost
+		applyNormalizer()
+		if (AppPrefs.frameRateMatch) {
+			val track = runCatching { player.currentVideoTrack }.getOrNull()
+			if (track != null && track.frameRateDen > 0 && track.frameRateNum > 0) {
+				val fps = track.frameRateNum.toFloat() / track.frameRateDen
+				runOnUiThread { Extras.matchFrameRate(this, videoSurface, fps) }
+			}
+		}
 		val found = runCatching { player.getChapters(-1)?.toList() }.getOrNull().orEmpty()
 		chapters = found
 		// a chapter called "OP", "Opening", "ED", "Ending", "Intro"… stands in for AniSkip when it has nothing
@@ -237,13 +268,20 @@ class PlayerActivity : ComponentActivity() {
 			else -> { finish(); return }
 		}
 
+		audioManager = getSystemService(AudioManager::class.java)
 		val options = arrayListOf("--audio-time-stretch") // keeps the pitch when playing faster
-		// how big the subtitles are: libVLC's relative size, smaller number = bigger text
+		// the pen of the subtitles that bring no style of their own: libVLC's relative size (smaller number = bigger text), colour, outline, box, weight
 		options += "--freetype-rel-fontsize=${AppPrefs.subtitleSize}"
+		options += "--freetype-color=${AppPrefs.subtitleColor}"
+		options += "--freetype-outline-thickness=${AppPrefs.subtitleOutline}"
+		if (AppPrefs.subtitleBackground) { options += "--freetype-background-color=0"; options += "--freetype-background-opacity=160" }
+		if (AppPrefs.subtitleBold) options += "--freetype-bold"
+		// the sound goes through an audio session of ours, so the system's effects (the leveller) can sit on it
+		audioSessionId = runCatching { audioManager.generateAudioSessionId() }.getOrDefault(0)
+		if (audioSessionId != 0) options += "--audiotrack-session-id=$audioSessionId"
 		if (BuildConfig.DEBUG) options += "-vv"
 		libVlc = LibVLC(this, options)
 		player = MediaPlayer(libVlc)
-		audioManager = getSystemService(AudioManager::class.java)
 		session = MediaSession(this, "Patchouli").apply {
 			setCallback(object : MediaSession.Callback() {
 				override fun onPlay() { player.play() }
@@ -555,6 +593,9 @@ class PlayerActivity : ComponentActivity() {
 		runCatching { unregisterReceiver(noisyReceiver) }
 		if (::session.isInitialized) { session.isActive = false; session.release() }
 		if (::audioManager.isInitialized) abandonFocus()
+		runCatching { normalizer?.release() }
+		normalizer = null
+		Extras.releaseFrameRate(this)
 		if (::player.isInitialized) {
 			saveProgress()
 			player.stop()

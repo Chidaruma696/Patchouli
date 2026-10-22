@@ -69,6 +69,29 @@ object AppPrefs {
 	const val SUBS_LARGE = 12
 	const val SUBS_HUGE = 8
 
+	/** The pen of the subtitles without a style of their own: colour, outline, a dark box behind, bold. Taken when the player opens. */
+	var subtitleColor by mutableStateOf(SUB_WHITE)
+		private set
+	var subtitleOutline by mutableStateOf(OUTLINE_NORMAL)
+		private set
+	var subtitleBackground by mutableStateOf(false)
+		private set
+	var subtitleBold by mutableStateOf(false)
+		private set
+	/** Ask the display for a refresh rate the video divides evenly (needs a 90/120 Hz panel to matter). */
+	var frameRateMatch by mutableStateOf(true)
+		private set
+	/** A compressor on the sound: dialogue up, openings down. */
+	var normalizeAudio by mutableStateOf(false)
+		private set
+
+	const val SUB_WHITE = 0xFFFFFF
+	const val SUB_YELLOW = 0xFFFF00
+	const val SUB_CYAN = 0x00FFFF
+	const val OUTLINE_THIN = 2
+	const val OUTLINE_NORMAL = 4
+	const val OUTLINE_THICK = 6
+
 	fun init(context: Context) {
 		val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 		rootPath = p.getString("root_path", "") ?: ""
@@ -85,6 +108,12 @@ object AppPrefs {
 		skipMode = p.getString("skip_mode", SKIP_BUTTON) ?: SKIP_BUTTON
 		subtitleSize = p.getInt("subtitle_size", SUBS_NORMAL)
 		anilistSync = p.getBoolean("anilist_sync", true)
+		subtitleColor = p.getInt("subtitle_color", SUB_WHITE)
+		subtitleOutline = p.getInt("subtitle_outline", OUTLINE_NORMAL)
+		subtitleBackground = p.getBoolean("subtitle_background", false)
+		subtitleBold = p.getBoolean("subtitle_bold", false)
+		frameRateMatch = p.getBoolean("frame_rate_match", true)
+		normalizeAudio = p.getBoolean("normalize_audio", false)
 	}
 
 	private fun prefs() = PatchouliApp.instance.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -101,6 +130,12 @@ object AppPrefs {
 	fun updateSkipMode(value: String) { skipMode = value; prefs().edit { putString("skip_mode", value) } }
 	fun updateSubtitleSize(value: Int) { subtitleSize = value; prefs().edit { putInt("subtitle_size", value) } }
 	fun updateAnilistSync(value: Boolean) { anilistSync = value; prefs().edit { putBoolean("anilist_sync", value) } }
+	fun updateSubtitleColor(value: Int) { subtitleColor = value; prefs().edit { putInt("subtitle_color", value) } }
+	fun updateSubtitleOutline(value: Int) { subtitleOutline = value; prefs().edit { putInt("subtitle_outline", value) } }
+	fun updateSubtitleBackground(value: Boolean) { subtitleBackground = value; prefs().edit { putBoolean("subtitle_background", value) } }
+	fun updateSubtitleBold(value: Boolean) { subtitleBold = value; prefs().edit { putBoolean("subtitle_bold", value) } }
+	fun updateFrameRateMatch(value: Boolean) { frameRateMatch = value; prefs().edit { putBoolean("frame_rate_match", value) } }
+	fun updateNormalizeAudio(value: Boolean) { normalizeAudio = value; prefs().edit { putBoolean("normalize_audio", value) } }
 	fun updateRootPath(value: String) {
 		rootPath = value.trim('/')
 		rootChosen = true

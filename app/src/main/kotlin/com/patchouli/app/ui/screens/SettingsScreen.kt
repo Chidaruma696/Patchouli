@@ -20,11 +20,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.patchouli.app.library.Backup
+import com.patchouli.app.library.Library
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -135,6 +141,58 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 				height = 34.dp,
 				fillWidth = true,
 			)
+			KitListRow(title = stringResource(R.string.subtitle_color), showDivider = false)
+			KitSegmented(
+				selected = AppPrefs.subtitleColor,
+				items = listOf(
+					KitSegmentedItem(AppPrefs.SUB_WHITE, stringResource(R.string.color_white)),
+					KitSegmentedItem(AppPrefs.SUB_YELLOW, stringResource(R.string.color_yellow)),
+					KitSegmentedItem(AppPrefs.SUB_CYAN, stringResource(R.string.color_cyan)),
+				),
+				onSelect = { AppPrefs.updateSubtitleColor(it) },
+				modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 12.dp),
+				height = 34.dp,
+				fillWidth = true,
+			)
+			KitListRow(title = stringResource(R.string.subtitle_outline), showDivider = false)
+			KitSegmented(
+				selected = AppPrefs.subtitleOutline,
+				items = listOf(
+					KitSegmentedItem(AppPrefs.OUTLINE_THIN, stringResource(R.string.outline_thin)),
+					KitSegmentedItem(AppPrefs.OUTLINE_NORMAL, stringResource(R.string.size_normal)),
+					KitSegmentedItem(AppPrefs.OUTLINE_THICK, stringResource(R.string.outline_thick)),
+				),
+				onSelect = { AppPrefs.updateSubtitleOutline(it) },
+				modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 12.dp),
+				height = 34.dp,
+				fillWidth = true,
+			)
+			KitListRow(
+				title = stringResource(R.string.subtitle_background),
+				onClick = { AppPrefs.updateSubtitleBackground(!AppPrefs.subtitleBackground) },
+				showDivider = true,
+				trailing = { KitCheckbox(checked = AppPrefs.subtitleBackground, onCheckedChange = { AppPrefs.updateSubtitleBackground(it) }) },
+			)
+			KitListRow(
+				title = stringResource(R.string.subtitle_bold),
+				onClick = { AppPrefs.updateSubtitleBold(!AppPrefs.subtitleBold) },
+				showDivider = true,
+				trailing = { KitCheckbox(checked = AppPrefs.subtitleBold, onCheckedChange = { AppPrefs.updateSubtitleBold(it) }) },
+			)
+			KitListRow(
+				title = stringResource(R.string.frame_rate_match),
+				subtitle = stringResource(R.string.frame_rate_match_summary),
+				onClick = { AppPrefs.updateFrameRateMatch(!AppPrefs.frameRateMatch) },
+				showDivider = true,
+				trailing = { KitCheckbox(checked = AppPrefs.frameRateMatch, onCheckedChange = { AppPrefs.updateFrameRateMatch(it) }) },
+			)
+			KitListRow(
+				title = stringResource(R.string.normalize_audio),
+				subtitle = stringResource(R.string.normalize_audio_summary),
+				onClick = { AppPrefs.updateNormalizeAudio(!AppPrefs.normalizeAudio) },
+				showDivider = true,
+				trailing = { KitCheckbox(checked = AppPrefs.normalizeAudio, onCheckedChange = { AppPrefs.updateNormalizeAudio(it) }) },
+			)
 			KitListRow(title = stringResource(R.string.gestures), subtitle = stringResource(R.string.gestures_summary))
 		}
 
@@ -166,7 +224,9 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 				title = stringResource(R.string.organize_setting),
 				subtitle = stringResource(R.string.organize_setting_summary) + " · " + stringResource(if (Organizer.hasPermission(context)) R.string.organize_permission_ok else R.string.organize_permission_missing),
 				onClick = { Organizer.permissionIntent(context)?.let { runCatching { context.startActivity(it) } } },
+				showDivider = true,
 			)
+			BackupRows()
 		}
 
 		KitSectionHead(label = stringResource(R.string.about), kicker = "情報")
@@ -178,6 +238,41 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 			modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
 		)
 	}
+}
+
+/** Everything remembered, to a file the user names, and back from one. */
+@Composable
+private fun BackupRows() {
+	val context = LocalContext.current
+	val colors = LocalPersonality.current.colors
+	val scope = rememberCoroutineScope()
+	var note by remember { mutableStateOf<String?>(null) }
+	val wroteWord = stringResource(R.string.backup_written)
+	val failedWord = stringResource(R.string.backup_failed)
+	val restoredWord = stringResource(R.string.backup_restored)
+	val write = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+		if (uri == null) return@rememberLauncherForActivityResult
+		scope.launch { note = runCatching { Backup.write(context, uri); wroteWord }.getOrElse { "$failedWord · ${it.message}" } }
+	}
+	val read = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+		if (uri == null) return@rememberLauncherForActivityResult
+		scope.launch {
+			note = runCatching { Backup.read(context, uri) }.map { String.format(restoredWord, it.bookmarks, it.lookups) }.getOrElse { "$failedWord · ${it.message}" }
+			Library.scan(context)
+		}
+	}
+	val stamp = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date()) }
+	KitListRow(
+		title = stringResource(R.string.backup_write),
+		subtitle = stringResource(R.string.backup_write_summary),
+		onClick = { write.launch("Patchouli-$stamp.json") },
+		showDivider = true,
+	)
+	KitListRow(
+		title = stringResource(R.string.backup_read),
+		subtitle = note ?: stringResource(R.string.backup_read_summary),
+		onClick = { read.launch(arrayOf("application/json", "*/*")) },
+	)
 }
 
 /** The user's AniList account: connect, what it is used for, disconnect. */

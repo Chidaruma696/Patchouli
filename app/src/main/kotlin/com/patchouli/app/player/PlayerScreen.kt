@@ -53,9 +53,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import com.patchouli.app.R
 import com.patchouli.app.cast.CastRemote
 import com.patchouli.app.cast.CastSheet
+import com.patchouli.app.catalog.Episodes
+import com.patchouli.app.catalog.Metadata
+import com.patchouli.app.library.Library
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
@@ -115,6 +122,7 @@ private const val HIDE_AFTER_MS = 4_000L
 fun PlayerScreen(activity: PlayerActivity) {
 	val player = activity.player
 	val context = LocalContext.current
+	val colors = LocalPersonality.current.colors
 	val audio = remember { context.getSystemService(AudioManager::class.java) }
 	val maxVolume = remember { audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
 
@@ -190,6 +198,26 @@ fun PlayerScreen(activity: PlayerActivity) {
 			delay(5_000)
 			activity.saveProgress()
 		}
+	}
+
+	// a frame of where a seek is heading, from the file itself; the retriever follows the file
+	val frames = remember(activity.index) { activity.currentFile?.let { runCatching { FramePreview(it) }.getOrNull() } }
+	DisposableEffect(frames) { onDispose { frames?.close() } }
+	var previewMs by remember { mutableStateOf<Long?>(null) }
+	var previewFrame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+	LaunchedEffect(previewMs?.let { it / FramePreview.STEP_MS }, frames) {
+		val ms = previewMs
+		if (ms == null || frames == null) { previewFrame = null; return@LaunchedEffect }
+		delay(60)
+		previewFrame = frames.at(ms)
+	}
+
+	// the next episode, named, for the card that comes up with the ending
+	val nextVideo = activity.nextPath?.let { Library.videoAt(it) }
+	val nextTitle = nextVideo?.let { v ->
+		val number = v.episode
+		val named = Library.find(v.folderPath)?.let { Metadata.rememberAnime(it) }?.let { Episodes.rememberTitles(it) }?.get(number ?: -1)
+		if (number != null) stringResource(R.string.episode_short, number) + (named?.let { " · $it" } ?: "") else v.title
 	}
 
 	// the sleep timer: when its moment comes, the player closes
@@ -268,12 +296,14 @@ fun PlayerScreen(activity: PlayerActivity) {
 				hudHold = true
 				val target = (seekStartMs + (total * SEEK_SPAN_MS).toLong()).coerceIn(0L, maxOf(length, 0L))
 				seekPreview = target
+				previewMs = target
 				val delta = target - seekStartMs
 				hud = Hud(null, "${if (delta >= 0) "+" else "−"}${fmtTime(abs(delta))}  ·  ${fmtTime(target)}")
 			},
 			onSeekEnd = {
 				seekPreview?.let { player.time = it; timeMs = it }
 				seekPreview = null
+				previewMs = null
 				hudHold = false
 			},
 			onZoom = { factor ->
@@ -291,6 +321,7 @@ fun PlayerScreen(activity: PlayerActivity) {
 			factory = { ctx ->
 				VLCVideoLayout(ctx).also { layout ->
 					player.attachViews(layout, null, true, false)
+					activity.videoSurface = Extras.videoSurface(layout)
 					player.videoScale = ScaleModes[scaleIndex].first
 					player.play()
 				}
@@ -330,10 +361,36 @@ fun PlayerScreen(activity: PlayerActivity) {
 			}
 		}
 
+		// the frame a seek is heading to, above the caption that says the time
+		previewFrame?.let { frame ->
+			if (previewMs != null) {
+				Box(Modifier.fillMaxSize().padding(bottom = 150.dp), contentAlignment = Alignment.Center) {
+					Image(
+						bitmap = frame.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop,
+						modifier = Modifier.hardShadow(DpOffset(5.dp, 5.dp), colors.shadow).width(200.dp).aspectRatio(16f / 9f).background(Color.Black).border(3.dp, colors.outline),
+					)
+				}
+			}
+		}
+
 		hud?.let { HudView(it) }
 
-		// the skip stamp, bottom right, above the strip when the controls are out; never while locked
-		if (skipNow != null && skipLabel != null && !locked && AppPrefs.skipMode == AppPrefs.SKIP_BUTTON) {
+		// with the ending, the card of the next episode: its name, and the way straight to it; in the last seconds, a count
+		val endingNow = skipNow?.isEnding == true || (length > 0 && length - timeMs in 1..20_000)
+		val nextCard = endingNow && activity.hasNext && AppPrefs.autoplayNext && !locked && nextTitle != null
+		if (nextCard) {
+			val left = ((length - timeMs) / 1000).toInt()
+			Box(Modifier.fillMaxSize().padding(end = 16.dp, bottom = if (controlsVisible) 124.dp else 24.dp), contentAlignment = Alignment.BottomEnd) {
+				KitSurface(elevation = KitSurfaceElevation.Raised, screentone = KitScreentone.Corner, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp), modifier = Modifier.width(300.dp)) {
+					Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+						KitText(if (left <= 10) stringResource(R.string.next_in, left) else stringResource(R.string.next_up), role = KitTextRole.Overline, color = colors.onSurfaceVariant)
+						KitText(nextTitle.orEmpty(), role = KitTextRole.Stamp, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+						KitButton(onClick = { activity.next() }, label = stringResource(R.string.next_now), size = KitButtonSize.Sm, emphasized = true, trailingIcon = ImageVector.vectorResource(R.drawable.ic_next), modifier = Modifier.align(Alignment.End))
+					}
+				}
+			}
+		} else if (skipNow != null && skipLabel != null && !locked && AppPrefs.skipMode == AppPrefs.SKIP_BUTTON) {
+			// the skip stamp, bottom right, above the strip when the controls are out; never while locked
 			Box(Modifier.fillMaxSize().padding(end = 16.dp, bottom = if (controlsVisible) 124.dp else 24.dp), contentAlignment = Alignment.BottomEnd) {
 				KitButton(onClick = { skip(skipNow, skippedLabel.orEmpty()) }, label = skipLabel, trailingIcon = ImageVector.vectorResource(R.drawable.ic_next), emphasized = true)
 			}
@@ -371,7 +428,8 @@ fun PlayerScreen(activity: PlayerActivity) {
 				length = length,
 				showRemaining = showRemaining,
 				scaleLabel = stringResource(ScaleModes[scaleIndex].second),
-				onSeekTo = { p -> position = p; player.position = p },
+				onSeekTo = { p -> position = p; player.position = p; if (length > 0) previewMs = (p * length).toLong() },
+				onSeekDone = { previewMs = null },
 				onToggleRemaining = { showRemaining = !showRemaining },
 				onPlayPause = { if (player.isPlaying) player.pause() else player.play() },
 				onLock = { locked = true; controlsVisible = false },
@@ -476,6 +534,18 @@ fun PlayerScreen(activity: PlayerActivity) {
 						showDivider = true,
 					)
 				}
+				// what is on the screen, as a picture in the gallery
+				val savedWord = stringResource(R.string.snapshot_saved)
+				val failedWord = stringResource(R.string.snapshot_failed)
+				KitListRow(
+					title = stringResource(R.string.snapshot),
+					subtitle = stringResource(R.string.snapshot_summary),
+					onClick = {
+						sheet = null
+						activity.snapshot { ok -> hud = Hud(if (ok) R.drawable.ic_check else null, if (ok) savedWord else failedWord) }
+					},
+					showDivider = true,
+				)
 				KitListRow(
 					title = stringResource(R.string.default_decoder),
 					subtitle = stringResource(R.string.decoder_summary),
@@ -564,6 +634,7 @@ private fun Controls(
 	showRemaining: Boolean,
 	scaleLabel: String,
 	onSeekTo: (Float) -> Unit,
+	onSeekDone: () -> Unit,
 	onToggleRemaining: () -> Unit,
 	onPlayPause: () -> Unit,
 	onLock: () -> Unit,
@@ -612,7 +683,7 @@ private fun Controls(
 		) {
 			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 				KitText(fmtTime(timeMs), role = KitTextRole.Mono, fontSize = 13.sp)
-				KitSlider(value = position, onValueChange = onSeekTo, modifier = Modifier.weight(1f))
+				KitSlider(value = position, onValueChange = onSeekTo, onValueChangeFinished = onSeekDone, modifier = Modifier.weight(1f))
 				KitText(
 					text = if (showRemaining) "−" + fmtTime((length - timeMs).coerceAtLeast(0)) else fmtTime(length),
 					role = KitTextRole.Mono, fontSize = 13.sp,

@@ -26,6 +26,10 @@ object TrackPrefs {
 
 	fun set(kind: String, folder: String, name: String) = prefs.edit { putString("$kind:$folder", name) }
 
+	fun export(): Map<String, String> = prefs.all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
+
+	fun import(data: Map<String, String>) = prefs.edit { data.forEach { (k, v) -> if (!prefs.contains(k)) putString(k, v) } }
+
 	private val subtitleExtensions = setOf("srt", "ass", "ssa", "vtt", "sub")
 	private val bracketed = Regex("""\[([^\]]+)\]""")
 
