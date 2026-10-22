@@ -25,12 +25,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +46,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.video.videoFramePercent
 import com.patchouli.app.R
+import com.patchouli.app.catalog.Episodes
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Names
@@ -70,10 +78,18 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 	val colors = LocalPersonality.current.colors
 	val anime = Metadata.rememberAnime(folder)
 	val lookup = Metadata[folder]
-	val subfolders = remember(folder) { folder.sortedFolders() }
-	val videos = remember(folder) { folder.sortedVideos() }
+	val hideWatched = AppPrefs.hideWatched
+	// not remembered: the order and the filter follow the bookmarks as they change
+	val subfolders = folder.sortedFolders().let { all -> if (hideWatched) all.filterNot { it.fullyWatched } else all }
+	val allVideos = remember(folder) { folder.sortedVideos() }
+	// the watched episodes step aside when asked; the player still gets the whole folder as its playlist
+	val videos = if (hideWatched) allVideos.filterNot { Progress[it.path]?.finished == true } else allVideos
+	val hidden = allVideos.size - videos.size
+	// the names of the episodes, from the catalogue, once the folder is known to be a series
+	val titles = anime?.let { Episodes.rememberTitles(it) }.orEmpty()
 	var menu by remember { mutableStateOf(false) }
 	var menuFor by remember { mutableStateOf<Folder?>(null) }
+	var videoMenuFor by remember { mutableStateOf<Video?>(null) }
 	var layoutSheet by remember { mutableStateOf(false) }
 	val title = Names.series(folder.name)
 	// the same list-or-grid setting as the home screen
@@ -101,7 +117,7 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 			verticalArrangement = Arrangement.spacedBy(10.dp),
 		) {
 			if (anime != null) {
-				item { AnimeHeader(anime = anime, cover = Metadata.cover(folder), watched = videos.count { Progress[it.path]?.finished == true }) }
+				item { AnimeHeader(anime = anime, cover = Metadata.cover(folder), watched = allVideos.count { Progress[it.path]?.finished == true }) }
 			}
 			if (subfolders.isNotEmpty()) {
 				item { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
@@ -129,9 +145,18 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 				item {
 					KitListContainer {
 						videos.forEachIndexed { index, video ->
-							VideoRow(video, showDivider = index < videos.lastIndex, onClick = { onPlay(video, videos) })
+							VideoRow(video, showDivider = index < videos.lastIndex, episodeTitle = video.episode?.let { titles[it] }, onClick = { onPlay(video, allVideos) }, onLongClick = { videoMenuFor = video })
 						}
 					}
+				}
+			}
+			if (hidden > 0) {
+				item {
+					KitText(
+						text = pluralStringResource(R.plurals.hidden_watched_n, hidden, hidden),
+						role = KitTextRole.Label, color = colors.onSurfaceVariant, uppercase = false, fontSize = 12.sp,
+						modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.Center,
+					)
 				}
 			}
 		}
@@ -139,7 +164,41 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 
 	if (menu) FolderMenu(folder, onDismiss = { menu = false })
 	menuFor?.let { sub -> FolderMenu(sub, onDismiss = { menuFor = null }) }
+	videoMenuFor?.let { video -> VideoMenu(video, onDismiss = { videoMenuFor = null }) }
 	if (layoutSheet) LibraryLayoutSheet(onDismiss = { layoutSheet = false })
+}
+
+/** Long press on an episode: call it watched, or not watched, by hand. */
+@Composable
+fun VideoMenu(video: Video, onDismiss: () -> Unit) {
+	val colors = LocalPersonality.current.colors
+	val mark = Progress[video.path]
+	val finished = mark?.finished == true
+	KitSheet(onDismiss = onDismiss, title = video.title, titleJp = "話") {
+		KitText(
+			text = buildString {
+				append(fmtTime(video.durationMs))
+				if (finished) append(" · ✓ ${stringResource(R.string.watched)}")
+				else if (mark?.started == true) append(" · ${stringResource(R.string.resume_at, fmtTime(mark.positionMs))}")
+			},
+			role = KitTextRole.Mono, color = colors.onSurfaceVariant, modifier = Modifier.padding(bottom = 12.dp),
+		)
+		KitListContainer {
+			KitListRow(
+				title = stringResource(if (finished) R.string.mark_unwatched else R.string.mark_watched),
+				icon = ImageVector.vectorResource(R.drawable.ic_check),
+				onClick = { if (finished) Progress.markUnwatched(video) else Progress.markWatched(video); onDismiss() },
+				showDivider = mark?.started == true,
+			)
+			if (mark?.started == true) {
+				KitListRow(
+					title = stringResource(R.string.forget_position),
+					subtitle = stringResource(R.string.forget_position_summary),
+					onClick = { Progress.forget(video.path); onDismiss() },
+				)
+			}
+		}
+	}
 }
 
 @Composable
@@ -182,29 +241,39 @@ private fun AnimeHeader(anime: com.patchouli.app.catalog.Anime, cover: Any?, wat
 	}
 }
 
+/** One episode: its name from the catalogue when there is one (the file's otherwise), the number and length under it, a frame at the right with the ink bar of how far it got and the stamp of the watched. */
 @Composable
-fun VideoRow(video: Video, showDivider: Boolean, onClick: () -> Unit) {
+fun VideoRow(video: Video, showDivider: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, episodeTitle: String? = null) {
 	val colors = LocalPersonality.current.colors
 	val mark = Progress[video.path]
+	val finished = mark?.finished == true
 	KitListRow(
-		title = video.title,
+		title = episodeTitle ?: video.title,
 		subtitle = buildString {
 			video.episode?.let { append(stringResource(R.string.episode_n, it)); append(" · ") }
 			append(fmtTime(video.durationMs))
-			if (mark?.finished == true) append(" · ✓ ${stringResource(R.string.watched)}")
+			if (finished) append(" · ✓ ${stringResource(R.string.watched)}")
 			else if (mark?.started == true) append(" · ${stringResource(R.string.resume_at, fmtTime(mark.positionMs))}")
 		},
 		onClick = onClick,
+		onLongClick = onLongClick,
 		showDivider = showDivider,
 		trailing = {
 			Box(Modifier.width(96.dp).aspectRatio(16f / 9f).background(Color.Black).border(2.dp, colors.outline)) {
 				// a frame from well inside the episode: the first one is black more often than not
-				AsyncImage(model = ImageRequest.Builder(LocalContext.current).data(File(video.path)).videoFramePercent(0.2).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-				if (mark != null && mark.fraction > 0f) {
-					KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp))
+				AsyncImage(model = ImageRequest.Builder(LocalContext.current).data(File(video.path)).videoFramePercent(0.2).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().then(if (finished) Modifier.alpha(0.55f) else Modifier))
+				if (mark != null && mark.fraction > 0f && !finished) {
+					// the ink bar: how much of it is behind
+					KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(5.dp).drawBehind { drawRect(colors.outline, topLeft = Offset(0f, 0f), size = Size(size.width, 1.5.dp.toPx())) })
 				}
-				if (mark?.finished == true) {
-					Icon(ImageVector.vectorResource(R.drawable.ic_check), contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp).align(Alignment.TopEnd).padding(2.dp))
+				if (finished) {
+					// a little stamp of the accent in the corner, tilted as if pressed by hand
+					Box(
+						modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).rotate(-8f).size(22.dp).background(colors.primary).border(2.dp, colors.outline),
+						contentAlignment = Alignment.Center,
+					) {
+						Icon(ImageVector.vectorResource(R.drawable.ic_check), contentDescription = stringResource(R.string.watched), tint = colors.onPrimary, modifier = Modifier.size(14.dp))
+					}
 				}
 			}
 		},

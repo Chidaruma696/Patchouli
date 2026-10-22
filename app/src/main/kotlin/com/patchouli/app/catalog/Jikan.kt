@@ -26,6 +26,9 @@ import java.util.concurrent.TimeUnit
 	val score: Double? = null,
 )
 @Serializable private data class JkResponse(val data: List<JkAnime> = emptyList())
+@Serializable private data class JkEpisode(val mal_id: Int, val title: String? = null, val title_romanji: String? = null)
+@Serializable private data class JkPagination(val has_next_page: Boolean = false)
+@Serializable private data class JkEpisodes(val data: List<JkEpisode> = emptyList(), val pagination: JkPagination? = null)
 
 /**
  * Jikan (api.jikan.moe), the unofficial MyAnimeList API: the fallback when AniList is down,
@@ -42,20 +45,34 @@ object Jikan {
 	private val gate = Mutex()
 	private var lastCall = 0L
 
-	suspend fun search(query: String, limit: Int = 5): List<Anime> = withContext(Dispatchers.IO) {
+	/** One GET, spaced from the previous one as the service asks. */
+	private suspend fun fetch(url: String): String {
 		gate.withLock {
 			val wait = SPACING_MS - (System.currentTimeMillis() - lastCall)
 			if (wait > 0) delay(wait)
 			lastCall = System.currentTimeMillis()
 		}
+		val request = Request.Builder().url(url).header("Accept", "application/json").header("User-Agent", "Patchouli/${com.patchouli.app.BuildConfig.VERSION_NAME}").build()
+		val (code, body) = client.newCall(request).execute().use { it.code to it.body.string() }
+		if (code != 200) error("Jikan: HTTP $code")
+		return body
+	}
+
+	/** One page of the episode list of a series (a hundred per page): number to title, and whether another page follows. */
+	suspend fun episodes(malId: Int, page: Int): Pair<Map<Int, String>, Boolean> = withContext(Dispatchers.IO) {
+		val body = fetch("$URL/$malId/episodes?page=$page")
+		val parsed = json.decodeFromString<JkEpisodes>(body)
+		val titles = parsed.data.mapNotNull { e -> (e.title ?: e.title_romanji)?.takeIf { it.isNotBlank() }?.let { e.mal_id to it.trim() } }.toMap()
+		titles to (parsed.pagination?.has_next_page == true)
+	}
+
+	suspend fun search(query: String, limit: Int = 5): List<Anime> = withContext(Dispatchers.IO) {
 		val url = URL.toHttpUrl().newBuilder()
 			.addQueryParameter("q", query.trim())
 			.addQueryParameter("limit", limit.toString())
 			.addQueryParameter("sfw", "true")
 			.build()
-		val request = Request.Builder().url(url).header("Accept", "application/json").header("User-Agent", "Patchouli/${com.patchouli.app.BuildConfig.VERSION_NAME}").build()
-		val (code, body) = client.newCall(request).execute().use { it.code to it.body.string() }
-		if (code != 200) error("Jikan: HTTP $code")
+		val body = fetch(url.toString())
 		json.decodeFromString<JkResponse>(body).data.map { a ->
 			Anime(
 				id = a.mal_id,

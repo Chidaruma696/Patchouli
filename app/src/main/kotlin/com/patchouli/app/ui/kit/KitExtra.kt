@@ -391,6 +391,7 @@ fun KitFab(
 	contentDescription: String,
 	modifier: Modifier = Modifier,
 	label: String? = null,
+	onLongClick: (() -> Unit)? = null,
 ) {
 	val personality = LocalPersonality.current
 	val colors = personality.colors
@@ -405,7 +406,7 @@ fun KitFab(
 		.background(colors.primary, shape)
 		.border(3.dp, colors.outline, shape)
 		.inkFocusRing(focused = { focused }, color = colors.primary)
-		.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+		.combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, onLongClick = onLongClick)
 	if (label != null) {
 		Row(
 			modifier = base.height(56.dp).padding(horizontal = 20.dp),

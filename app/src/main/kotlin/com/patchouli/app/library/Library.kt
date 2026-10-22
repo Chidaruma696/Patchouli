@@ -36,10 +36,22 @@ class Folder(val path: String, val name: String) {
 	val latest: Long get() = maxOf(videos.maxOfOrNull { it.dateAdded } ?: 0L, folders.maxOfOrNull { it.latest } ?: 0L)
 
 	fun sortedVideos(): List<Video> = videos.sortedWith(compareBy<Video>({ it.episode ?: Int.MAX_VALUE }).thenComparator { a, b -> Names.natural.compare(a.title, b.title) })
-	fun sortedFolders(): List<Folder> = folders.map { it.collapsed() }.sortedWith { a, b -> Names.natural.compare(a.name, b.name) }
+
+	/** The folders under this one in the order the library setting asks for: by name, last played first, or last added first. */
+	fun sortedFolders(sort: String = AppPrefs.librarySort): List<Folder> {
+		val byName = folders.map { it.collapsed() }.sortedWith { a, b -> Names.natural.compare(a.name, b.name) }
+		return when (sort) {
+			AppPrefs.SORT_RECENT -> byName.sortedByDescending { Progress.lastPlayedIn(it) }
+			AppPrefs.SORT_ADDED -> byName.sortedByDescending { it.latest }
+			else -> byName
+		}
+	}
+
+	/** Nothing left to watch under this folder. */
+	val fullyWatched: Boolean get() = total > 0 && Progress.watchedIn(this) == total
 
 	/** The first video of the shelf, for a thumbnail when there is no cover. */
-	val firstVideo: Video? get() = sortedVideos().firstOrNull() ?: sortedFolders().firstNotNullOfOrNull { it.firstVideo }
+	val firstVideo: Video? get() = sortedVideos().firstOrNull() ?: sortedFolders(AppPrefs.SORT_NAME).firstNotNullOfOrNull { it.firstVideo }
 
 	/** A folder that only holds one folder shows as that one: "Movies/Anime" reads "Anime". */
 	fun collapsed(): Folder {

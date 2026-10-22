@@ -32,12 +32,18 @@ data class Anime(
 	val year: Int? = null,
 	val format: String? = null,
 	val score: Int? = null,
-)
+	/** The same series on MyAnimeList, when the catalogue knows it; the episode names come from there. */
+	val idMal: Int? = null,
+) {
+	/** The MyAnimeList id, whichever catalogue the entry came from. */
+	val malId: Int? get() = if (source == "mal") id else idMal
+}
 
 @Serializable private data class AlTitle(val romaji: String? = null, val english: String? = null, val native: String? = null)
 @Serializable private data class AlCover(val large: String? = null, val extraLarge: String? = null)
 @Serializable private data class AlMedia(
 	val id: Int,
+	val idMal: Int? = null,
 	val title: AlTitle? = null,
 	val coverImage: AlCover? = null,
 	val bannerImage: String? = null,
@@ -48,7 +54,7 @@ data class Anime(
 	val averageScore: Int? = null,
 )
 @Serializable private data class AlPage(val media: List<AlMedia> = emptyList())
-@Serializable private data class AlData(val Page: AlPage? = null)
+@Serializable private data class AlData(val Page: AlPage? = null, val Media: AlMedia? = null)
 @Serializable private data class AlError(val message: String? = null)
 @Serializable private data class AlResponse(val data: AlData? = null, val errors: List<AlError> = emptyList())
 
@@ -68,11 +74,15 @@ object AniList {
 		query(${'$'}s: String, ${'$'}n: Int) {
 			Page(perPage: ${'$'}n) {
 				media(search: ${'$'}s, type: ANIME, isAdult: false, sort: SEARCH_MATCH) {
-					id title { romaji english native } coverImage { large extraLarge } bannerImage
+					id idMal title { romaji english native } coverImage { large extraLarge } bannerImage
 					description(asHtml: false) episodes seasonYear format averageScore
 				}
 			}
 		}
+	"""
+
+	private const val MAL_ID = """
+		query(${'$'}id: Int) { Media(id: ${'$'}id, type: ANIME) { id idMal } }
 	"""
 
 	private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true; isLenient = true }
@@ -87,8 +97,15 @@ object AniList {
 		return post(SEARCH, vars).data?.Page?.media.orEmpty().map { it.toAnime() }
 	}
 
+	/** The MyAnimeList id of an AniList entry, for the ones looked up before the search asked for it. */
+	suspend fun malId(id: Int): Int? {
+		val vars = buildJsonObject { put("id", id) }
+		return post(MAL_ID, vars).data?.Media?.idMal
+	}
+
 	private fun AlMedia.toAnime() = Anime(
 		id = id,
+		idMal = idMal,
 		title = title?.romaji ?: title?.english ?: title?.native ?: "?",
 		titleEnglish = title?.english,
 		cover = coverImage?.extraLarge ?: coverImage?.large,

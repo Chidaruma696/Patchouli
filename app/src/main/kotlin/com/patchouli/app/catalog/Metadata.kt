@@ -182,6 +182,13 @@ object Metadata {
 		return emptyList()
 	}
 
+	/** The MyAnimeList id of an AniList entry arrived later: every folder that points at that entry learns it. */
+	fun attachMalId(anilistId: Int, malId: Int) {
+		cache.entries.filter { it.value.anime?.let { a -> a.source == "anilist" && a.id == anilistId && a.idMal == null } == true }.toList().forEach { (path, lookup) ->
+			store(path, lookup.copy(anime = lookup.anime!!.copy(idMal = malId)))
+		}
+	}
+
 	/** The user picked one of the candidates. */
 	fun choose(folder: Folder, anime: Anime) {
 		val current = cache[folder.path]

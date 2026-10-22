@@ -48,6 +48,31 @@
 	<string name="synopsis_more">Más</string>
 	<string name="synopsis_less">Menos</string>
 	<string name="episodes_of">%1$d de %2$d episodios</string>
+	<string name="episode_short">E%1$d</string>
+	<string name="resume_of">%1$s de %2$s</string>
+	<string name="resume_keep">Seguir</string>
+	<string name="resume_restart">Desde el principio</string>
+	<string name="resume_stale">Sigue en %1$s, donde lo dejaste %2$s</string>
+	<string name="mark_watched">Marcar como visto</string>
+	<string name="mark_unwatched">Marcar como no visto</string>
+	<string name="forget_position">Olvidar por dónde iba</string>
+	<string name="forget_position_summary">La próxima vez abre desde el principio</string>
+	<string name="mark_folder_watched">Marcar todo como visto</string>
+	<string name="mark_folder_unwatched">Marcar todo como no visto</string>
+	<string name="mark_folder_summary">%1$d de %2$d vistos</string>
+	<plurals name="hidden_watched_n">
+		<item quantity="one">%1$d episodio visto oculto</item>
+		<item quantity="other">%1$d episodios vistos ocultos</item>
+	</plurals>
+	<string name="layout_kind">Disposición</string>
+	<string name="sort_by">Orden</string>
+	<string name="sort_name">Nombre</string>
+	<string name="sort_recent">Último visto</string>
+	<string name="sort_added">Último añadido</string>
+	<string name="hide_watched">Ocultar lo visto</string>
+	<string name="hide_watched_summary">Las estanterías sin nada pendiente y los episodios ya vistos</string>
+	<string name="welcome_step_permission">primero, el permiso</string>
+	<string name="welcome_step_folder">luego, las estanterías</string>
 
 	<string name="permission_title">Patchouli necesita ver tus vídeos</string>
 	<string name="permission_text">Lee los archivos de vídeo del teléfono para armar la biblioteca. No sube nada; lo único que sale del teléfono es el nombre de una carpeta cuando le pide la carátula a AniList.</string>

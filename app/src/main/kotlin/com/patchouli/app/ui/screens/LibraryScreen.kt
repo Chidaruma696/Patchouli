@@ -44,10 +44,13 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.video.videoFramePercent
+import android.text.format.DateUtils
 import com.patchouli.app.R
+import com.patchouli.app.catalog.Episodes
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Library
+import com.patchouli.app.library.Mark
 import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
 import com.patchouli.app.library.Video
@@ -55,8 +58,10 @@ import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
 import com.patchouli.app.ui.kit.KitButtonVariant
+import com.patchouli.app.ui.kit.KitCheckbox
 import com.patchouli.app.ui.kit.KitCircularProgress
 import com.patchouli.app.ui.kit.KitFab
+import com.patchouli.app.ui.kit.KitLinearProgress
 import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitListRow
 import com.patchouli.app.ui.kit.KitSectionHead
@@ -77,12 +82,17 @@ import java.util.Locale
 @Composable
 fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit, onPlay: (Video) -> Unit) {
 	val colors = LocalPersonality.current.colors
-	val shelves = Library.shelves
+	// a shelf with nothing left to watch stays out of sight when asked
+	val shelves = Library.shelves.let { all -> if (AppPrefs.hideWatched) all.filterNot { it.fullyWatched } else all }
 	// the newest half-watched video that is still on the phone
 	val last = Progress.continueWatching(5).firstNotNullOfOrNull { (path, mark) -> Library.videoAt(path)?.let { it to mark } }
 	var menuFor by remember { mutableStateOf<Folder?>(null) }
+	var videoMenuFor by remember { mutableStateOf<Video?>(null) }
+	var resumeSheet by remember { mutableStateOf(false) }
 	var query by remember { mutableStateOf("") }
 	menuFor?.let { FolderMenu(it, onDismiss = { menuFor = null }) }
+	videoMenuFor?.let { VideoMenu(it, onDismiss = { videoMenuFor = null }) }
+	if (resumeSheet && last != null) ResumeSheet(last.first, last.second, onDismiss = { resumeSheet = false }, onPlay = { resumeSheet = false; onPlay(last.first) })
 	if (Library.loading && Library.root == null) {
 		Box(Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
 			Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -145,13 +155,13 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 				wide { KitSectionHead(label = stringResource(R.string.videos), kicker = "話") }
 				wide {
 					KitListContainer {
-						videos.forEachIndexed { index, video -> VideoRow(video, showDivider = index < videos.lastIndex, onClick = { onPlay(video) }) }
+						videos.forEachIndexed { index, video -> VideoRow(video, showDivider = index < videos.lastIndex, onClick = { onPlay(video) }, onLongClick = { videoMenuFor = video }) }
 					}
 				}
 			}
 			return@LazyVerticalGrid
 		}
-		val loose = Library.home?.sortedVideos().orEmpty()
+		val loose = Library.home?.sortedVideos().orEmpty().let { all -> if (AppPrefs.hideWatched) all.filterNot { Progress[it.path]?.finished == true } else all }
 		if (shelves.isEmpty() && loose.isEmpty()) {
 			wide {
 				Column(Modifier.fillMaxWidth().padding(top = 32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -172,21 +182,54 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 				wide { KitSectionHead(label = stringResource(R.string.videos), kicker = "話") }
 				wide {
 					KitListContainer {
-						loose.forEachIndexed { index, video -> VideoRow(video, showDivider = index < loose.lastIndex, onClick = { onPlay(video) }) }
+						loose.forEachIndexed { index, video -> VideoRow(video, showDivider = index < loose.lastIndex, onClick = { onPlay(video) }, onLongClick = { videoMenuFor = video }) }
 					}
 				}
 			}
 		}
 	}
-	// the one button: play on, from where the last video was left; floats over the shelves, bottom right
+	// the one button: play on, from where the last video was left; floats over the shelves, bottom right.
+	// Held down, it first says what it would play.
 	if (last != null) {
 		KitFab(
 			onClick = { onPlay(last.first) },
+			onLongClick = { resumeSheet = true },
 			icon = ImageVector.vectorResource(R.drawable.ic_play),
 			contentDescription = stringResource(R.string.resume_at, fmtTime(last.second.positionMs)),
 			modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = contentPadding.calculateBottomPadding() + 16.dp),
 		)
 	}
+	}
+}
+
+/** Behind a long press on the floating play: the cover, the episode, how far it got, and the choice to start it over. */
+@Composable
+private fun ResumeSheet(video: Video, mark: Mark, onDismiss: () -> Unit, onPlay: () -> Unit) {
+	val colors = LocalPersonality.current.colors
+	val folder = Library.find(video.folderPath)
+	val series = folder?.let { Names.series(it.name) } ?: video.folderPath.substringAfterLast('/')
+	val episodeTitle = folder?.let { Metadata.rememberAnime(it) }?.let { Episodes.rememberTitles(it) }?.get(video.episode ?: -1)
+	KitSheet(onDismiss = onDismiss, title = series, titleJp = "続き") {
+		Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+			if (folder != null) FolderCover(folder, modifier = Modifier.width(88.dp).aspectRatio(2f / 3f).border(2.dp, colors.outline), note = false)
+			Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+				KitText(
+					text = buildString {
+						video.episode?.let { append(stringResource(R.string.episode_short, it)) }
+						episodeTitle?.let { if (isNotEmpty()) append(" · "); append(it) }
+						if (isEmpty()) append(video.title)
+					},
+					role = KitTextRole.Stamp, fontSize = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+				)
+				KitText(stringResource(R.string.resume_of, fmtTime(mark.positionMs), fmtTime(mark.lengthMs)), role = KitTextRole.Mono, color = colors.onSurfaceVariant)
+				KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.fillMaxWidth().height(8.dp).border(2.dp, colors.outline))
+				KitText(DateUtils.getRelativeTimeSpanString(mark.at).toString(), role = KitTextRole.Label, color = colors.onSurfaceVariant, uppercase = false, fontSize = 12.sp)
+			}
+		}
+		Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+			KitButton(onClick = onPlay, label = stringResource(R.string.resume_keep), emphasized = true, modifier = Modifier.weight(1f))
+			KitButton(onClick = { Progress.forget(video.path); onPlay() }, label = stringResource(R.string.resume_restart), variant = KitButtonVariant.Outline, modifier = Modifier.weight(1f))
+		}
 	}
 }
 
@@ -213,10 +256,12 @@ fun CoversBanner(folders: List<Folder>) {
 	}
 }
 
-/** The sheet behind the top-bar icon: a list, or a grid two to four covers across. */
+/** The sheet behind the top-bar icon: a list or a grid two to four across, the order of the shelves, and whether the watched stay in sight. */
 @Composable
 fun LibraryLayoutSheet(onDismiss: () -> Unit) {
+	val colors = LocalPersonality.current.colors
 	KitSheet(onDismiss = onDismiss, title = stringResource(R.string.library_layout)) {
+		KitText(stringResource(R.string.layout_kind), role = KitTextRole.Overline, color = colors.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
 		KitSegmented(
 			selected = AppPrefs.libraryColumns,
 			items = listOf(
@@ -225,16 +270,32 @@ fun LibraryLayoutSheet(onDismiss: () -> Unit) {
 				KitSegmentedItem(3, "3"),
 				KitSegmentedItem(4, "4"),
 			),
-			onSelect = { AppPrefs.updateLibraryColumns(it); onDismiss() },
+			onSelect = { AppPrefs.updateLibraryColumns(it) },
 			modifier = Modifier.fillMaxWidth(),
 			height = 38.dp,
 			fillWidth = true,
 		)
-		KitText(
-			text = if (AppPrefs.libraryColumns == 0) stringResource(R.string.layout_list) else stringResource(R.string.layout_columns, AppPrefs.libraryColumns),
-			role = KitTextRole.Label, color = LocalPersonality.current.colors.onSurfaceVariant, uppercase = false, fontSize = 12.sp,
-			modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
+		KitText(stringResource(R.string.sort_by), role = KitTextRole.Overline, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 18.dp, bottom = 8.dp))
+		KitSegmented(
+			selected = AppPrefs.librarySort,
+			items = listOf(
+				KitSegmentedItem(AppPrefs.SORT_NAME, stringResource(R.string.sort_name)),
+				KitSegmentedItem(AppPrefs.SORT_RECENT, stringResource(R.string.sort_recent)),
+				KitSegmentedItem(AppPrefs.SORT_ADDED, stringResource(R.string.sort_added)),
+			),
+			onSelect = { AppPrefs.updateLibrarySort(it) },
+			modifier = Modifier.fillMaxWidth(),
+			height = 38.dp,
+			fillWidth = true,
 		)
+		KitListContainer(Modifier.padding(top = 18.dp, bottom = 6.dp)) {
+			KitListRow(
+				title = stringResource(R.string.hide_watched),
+				subtitle = stringResource(R.string.hide_watched_summary),
+				onClick = { AppPrefs.updateHideWatched(!AppPrefs.hideWatched) },
+				trailing = { KitCheckbox(checked = AppPrefs.hideWatched, onCheckedChange = { AppPrefs.updateHideWatched(it) }) },
+			)
+		}
 	}
 }
 

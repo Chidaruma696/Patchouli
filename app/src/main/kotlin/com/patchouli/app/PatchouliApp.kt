@@ -7,8 +7,10 @@ import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import com.patchouli.app.catalog.Episodes
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Progress
+import com.patchouli.app.player.TrackPrefs
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.ThemePrefs
 
@@ -21,6 +23,8 @@ class PatchouliApp : Application(), SingletonImageLoader.Factory {
 		AppPrefs.init(this)
 		Progress.init(this)
 		Metadata.init(this)
+		Episodes.init(this)
+		TrackPrefs.init(this)
 	}
 
 	/** Covers come from the network; thumbnails are frames pulled out of the files themselves. */

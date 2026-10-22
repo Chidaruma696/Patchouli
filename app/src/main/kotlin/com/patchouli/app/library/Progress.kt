@@ -64,6 +64,30 @@ object Progress {
 		prefs().edit { remove(path) }
 	}
 
+	/** The user says this one is watched: the bookmark sits at the end, with the length the file or the old mark knows. */
+	fun markWatched(video: Video) {
+		val length = video.durationMs.takeIf { it > 0 } ?: marks[video.path]?.lengthMs ?: return
+		update(video.path, length, length)
+	}
+
+	/** The user says this one is not watched after all: no bookmark at all, as if never opened. */
+	fun markUnwatched(video: Video) = forget(video.path)
+
+	/** Every video under a folder, watched or not, in one go. */
+	fun markFolder(folder: Folder, watched: Boolean) {
+		fun walk(f: Folder) {
+			f.videos.forEach { if (watched) markWatched(it) else markUnwatched(it) }
+			f.folders.forEach(::walk)
+		}
+		walk(folder)
+	}
+
+	/** Watched videos under a folder, counting its subfolders too. */
+	fun watchedIn(folder: Folder): Int = folder.videos.count { marks[it.path]?.finished == true } + folder.folders.sumOf { watchedIn(it) }
+
+	/** When something under a folder was last played, for "most recent first"; 0 when nothing was. */
+	fun lastPlayedIn(folder: Folder): Long = maxOf(folder.videos.maxOfOrNull { marks[it.path]?.at ?: 0L } ?: 0L, folder.folders.maxOfOrNull { lastPlayedIn(it) } ?: 0L)
+
 	/** The videos left half-way, newest first. */
 	fun continueWatching(limit: Int = 12): List<Pair<String, Mark>> =
 		marks.entries.filter { it.value.started }.sortedByDescending { it.value.at }.take(limit).map { it.key to it.value }

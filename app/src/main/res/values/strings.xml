@@ -49,6 +49,31 @@
 	<string name="synopsis_more">More</string>
 	<string name="synopsis_less">Less</string>
 	<string name="episodes_of">%1$d of %2$d episodes</string>
+	<string name="episode_short">E%1$d</string>
+	<string name="resume_of">%1$s of %2$s</string>
+	<string name="resume_keep">Keep going</string>
+	<string name="resume_restart">From the start</string>
+	<string name="resume_stale">Picked up at %1$s, where it was left %2$s</string>
+	<string name="mark_watched">Mark as watched</string>
+	<string name="mark_unwatched">Mark as not watched</string>
+	<string name="forget_position">Forget where it was</string>
+	<string name="forget_position_summary">Next time it opens from the start</string>
+	<string name="mark_folder_watched">Mark everything as watched</string>
+	<string name="mark_folder_unwatched">Mark everything as not watched</string>
+	<string name="mark_folder_summary">%1$d of %2$d watched</string>
+	<plurals name="hidden_watched_n">
+		<item quantity="one">%1$d watched episode out of sight</item>
+		<item quantity="other">%1$d watched episodes out of sight</item>
+	</plurals>
+	<string name="layout_kind">Layout</string>
+	<string name="sort_by">Order</string>
+	<string name="sort_name">Name</string>
+	<string name="sort_recent">Last played</string>
+	<string name="sort_added">Last added</string>
+	<string name="hide_watched">Hide what is watched</string>
+	<string name="hide_watched_summary">Shelves with nothing left, and the episodes already seen</string>
+	<string name="welcome_step_permission">first, the permission</string>
+	<string name="welcome_step_folder">then, the shelves</string>
 
 	<!-- permission -->
 	<string name="permission_title">Patchouli needs to see your videos</string>

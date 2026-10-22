@@ -38,6 +38,16 @@ object AppPrefs {
 	/** How the shelves are laid out: 0 is a list, 2 to 4 are grid columns. */
 	var libraryColumns by mutableStateOf(2)
 		private set
+	/** The order of the shelves: by name, by what was played last, or by what arrived last. */
+	var librarySort by mutableStateOf(SORT_NAME)
+		private set
+	/** Leave out what is already watched: whole folders on the shelves, episodes inside one. */
+	var hideWatched by mutableStateOf(false)
+		private set
+
+	const val SORT_NAME = "name"
+	const val SORT_RECENT = "recent"
+	const val SORT_ADDED = "added"
 
 	fun init(context: Context) {
 		val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -50,6 +60,8 @@ object AppPrefs {
 		coversOnline = p.getBoolean("covers_online", true)
 		kaoBannerVisible = p.getBoolean("kao_banner", true)
 		libraryColumns = p.getInt("library_columns", 2)
+		librarySort = p.getString("library_sort", SORT_NAME) ?: SORT_NAME
+		hideWatched = p.getBoolean("hide_watched", false)
 	}
 
 	private fun prefs() = PatchouliApp.instance.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -61,6 +73,8 @@ object AppPrefs {
 	fun updateCoversOnline(value: Boolean) { coversOnline = value; prefs().edit { putBoolean("covers_online", value) } }
 	fun updateKaoBanner(value: Boolean) { kaoBannerVisible = value; prefs().edit { putBoolean("kao_banner", value) } }
 	fun updateLibraryColumns(value: Int) { libraryColumns = if (value == 0) 0 else value.coerceIn(2, 4); prefs().edit { putInt("library_columns", libraryColumns) } }
+	fun updateLibrarySort(value: String) { librarySort = value; prefs().edit { putString("library_sort", value) } }
+	fun updateHideWatched(value: Boolean) { hideWatched = value; prefs().edit { putBoolean("hide_watched", value) } }
 	fun updateRootPath(value: String) {
 		rootPath = value.trim('/')
 		rootChosen = true

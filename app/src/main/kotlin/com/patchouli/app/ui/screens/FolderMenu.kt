@@ -30,6 +30,7 @@ import com.patchouli.app.catalog.Anime
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Names
+import com.patchouli.app.library.Progress
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitCircularProgress
 import com.patchouli.app.ui.kit.KitListContainer
@@ -110,7 +111,17 @@ fun FolderMenu(folder: Folder, onDismiss: () -> Unit) {
 					title = stringResource(R.string.organize),
 					subtitle = stringResource(R.string.organize_summary),
 					onClick = { organize = true },
+					showDivider = folder.total > 0,
 				)
+				// the whole shelf at once: everything watched, or nothing yet
+				if (folder.total > 0) {
+					val allWatched = folder.fullyWatched
+					KitListRow(
+						title = stringResource(if (allWatched) R.string.mark_folder_unwatched else R.string.mark_folder_watched),
+						subtitle = stringResource(R.string.mark_folder_summary, Progress.watchedIn(folder), folder.total),
+						onClick = { Progress.markFolder(folder, !allWatched); onDismiss() },
+					)
+				}
 			}
 			if (lookup != null && lookup.anime == null && !notSeries) {
 				KitText(stringResource(R.string.no_match) + " · " + lookup.query, role = KitTextRole.Body, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp), uppercase = false)
