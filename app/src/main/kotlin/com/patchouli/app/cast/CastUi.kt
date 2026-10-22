@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,6 +36,7 @@ import com.patchouli.app.ui.kit.KitSheet
 import com.patchouli.app.ui.kit.KitText
 import com.patchouli.app.ui.kit.KitTextRole
 import com.patchouli.app.ui.kit.LocalPersonality
+import com.patchouli.app.ui.screens.fmtTime
 
 /** The TVs found on the network as they answer; tapping one sends the file at [path] to it. */
 @Composable
@@ -74,15 +78,17 @@ fun CastSheet(path: String, title: String, positionMs: Long, onDismiss: () -> Un
 
 /**
  * While something is on the TV the phone is a remote, nothing else: the player underneath is
- * paused and covered. One screen with where it is going, what, pause/play, and two ways out:
- * stop, or back to the phone.
+ * paused and covered. One screen with where it is going, what, a bar to jump around in it,
+ * pause/play, and two ways out: stop, or back to the phone (which picks up where the TV was).
  */
 @Composable
-fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: () -> Unit) {
+fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: (positionMs: Long) -> Unit) {
 	val context = LocalContext.current
 	val colors = LocalPersonality.current.colors
 	val state by CastService.state.collectAsState()
 	val s = state ?: return
+	// while the thumb is held the bar shows the finger, not the TV
+	var dragging by remember { mutableStateOf<Float?>(null) }
 	Box(modifier.fillMaxSize().background(colors.background), contentAlignment = Alignment.Center) {
 		Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
 			KitText(text = "📺", role = KitTextRole.Title, color = colors.primary)
@@ -91,7 +97,26 @@ fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: () -> Unit) {
 				role = KitTextRole.Title, color = if (s.error != null) colors.error else colors.onBackground, uppercase = false, maxLines = 3,
 			)
 			KitText(text = s.title, role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false, maxLines = 2)
-			Spacer(Modifier.height(10.dp))
+			if (s.error == null && !s.busy && s.durationMs > 0) {
+				val shownMs = dragging?.let { (it * s.durationMs).toLong() } ?: s.positionMs
+				Column(Modifier.fillMaxWidth()) {
+					Slider(
+						value = dragging ?: (s.positionMs.toFloat() / s.durationMs).coerceIn(0f, 1f),
+						onValueChange = { dragging = it },
+						onValueChangeFinished = {
+							dragging?.let { CastService.seek(context, (it * s.durationMs).toLong()) }
+							dragging = null
+						},
+						colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.primary.copy(alpha = 0.25f)),
+					)
+					Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+						KitText(text = fmtTime(shownMs), role = KitTextRole.Mono, color = colors.onSurfaceVariant)
+						KitText(text = fmtTime(s.durationMs), role = KitTextRole.Mono, color = colors.onSurfaceVariant)
+					}
+				}
+			} else {
+				Spacer(Modifier.height(10.dp))
+			}
 			if (s.error == null) {
 				if (s.busy) {
 					KitCircularProgress()
@@ -108,7 +133,11 @@ fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: () -> Unit) {
 					label = "■  " + stringResource(R.string.cast_stop), size = KitButtonSize.Sm, variant = KitButtonVariant.Outline,
 				)
 				KitButton(
-					onClick = { if (s.error == null) CastService.stop(context) else CastService.state.value = null; onBackToPhone() },
+					onClick = {
+						val at = if (s.error == null) s.positionMs else 0L
+						if (s.error == null) CastService.stop(context) else CastService.state.value = null
+						onBackToPhone(at)
+					},
 					label = stringResource(R.string.cast_back_to_phone), size = KitButtonSize.Sm, variant = KitButtonVariant.Tonal,
 				)
 			}

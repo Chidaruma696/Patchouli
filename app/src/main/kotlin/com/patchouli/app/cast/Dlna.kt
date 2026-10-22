@@ -22,6 +22,9 @@ import java.util.concurrent.TimeUnit
 /** A TV or box on the network that accepts a video URL: its name and where to send commands. */
 data class Renderer(val name: String, val location: String, val controlUrl: String)
 
+/** Where the TV is in the video and how long the video is, as the TV reports it (0 when it does not say). */
+data class Position(val relMs: Long, val durationMs: Long)
+
 /**
  * The little of DLNA/UPnP that sending a video to a TV needs, written here instead of pulling a
  * UPnP stack: an SSDP search for AVTransport renderers, their description XML for the name and
@@ -130,7 +133,20 @@ object Dlna {
 		action(renderer, "Seek", "<InstanceID>0</InstanceID><Unit>REL_TIME</Unit><Target>$target</Target>")
 	}
 
-	private suspend fun action(renderer: Renderer, name: String, arguments: String) = withContext(Dispatchers.IO) {
+	/** Where the TV is right now (GetPositionInfo); null when it does not report a time. */
+	suspend fun position(renderer: Renderer): Position? {
+		val xml = action(renderer, "GetPositionInfo", "<InstanceID>0</InstanceID>")
+		val rel = parseTime(tagText(xml, "RelTime")) ?: return null
+		val duration = parseTime(tagText(xml, "TrackDuration")) ?: 0L
+		return Position(rel, duration)
+	}
+
+	/** PLAYING, PAUSED_PLAYBACK, STOPPED, TRANSITIONING… (GetTransportInfo); null when it does not say. */
+	suspend fun transportState(renderer: Renderer): String? =
+		tagText(action(renderer, "GetTransportInfo", "<InstanceID>0</InstanceID>"), "CurrentTransportState")
+
+	/** Sends one SOAP action and gives back the TV's answer, for the actions that return something. */
+	private suspend fun action(renderer: Renderer, name: String, arguments: String): String = withContext(Dispatchers.IO) {
 		val body = """<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:$name xmlns:u="$SERVICE">$arguments</u:$name></s:Body></s:Envelope>"""
 		val request = Request.Builder().url(renderer.controlUrl)
 			.header("SOAPACTION", "\"$SERVICE#$name\"")
@@ -138,12 +154,25 @@ object Dlna {
 			.post(body.toRequestBody("text/xml; charset=\"utf-8\"".toMediaType()))
 			.build()
 		client.newCall(request).execute().use { response ->
+			val text = response.body.string()
 			if (!response.isSuccessful) {
-				val text = response.body.string()
 				val code = Regex("<errorCode>(\\d+)</errorCode>").find(text)?.groupValues?.get(1)
 				error("$name: HTTP ${response.code}${code?.let { " (UPnP $it)" } ?: ""}")
 			}
+			text
 		}
+	}
+
+	private fun tagText(xml: String, tag: String): String? = Regex("<$tag>([^<]*)</$tag>").find(xml)?.groupValues?.get(1)?.trim()
+
+	/** "0:01:23" or "0:01:23.500" to milliseconds; NOT_IMPLEMENTED and the like give null. */
+	private fun parseTime(s: String?): Long? {
+		val parts = s?.takeIf { it.isNotBlank() }?.substringBefore('.')?.split(':') ?: return null
+		if (parts.size != 3) return null
+		val h = parts[0].toLongOrNull() ?: return null
+		val m = parts[1].toLongOrNull() ?: return null
+		val sec = parts[2].toLongOrNull() ?: return null
+		return (h * 3600 + m * 60 + sec) * 1000
 	}
 
 	private fun esc(s: String): String = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")

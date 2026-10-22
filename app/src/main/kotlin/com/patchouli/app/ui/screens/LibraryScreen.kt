@@ -14,13 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,7 +71,8 @@ import java.util.Locale
 fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit, onPlay: (Video) -> Unit) {
 	val colors = LocalPersonality.current.colors
 	val shelves = Library.shelves
-	val continuing = Progress.continueWatching()
+	// the newest half-watched video that is still on the phone
+	val last = Progress.continueWatching(5).firstNotNullOfOrNull { (path, mark) -> Library.videoAt(path)?.let { it to mark } }
 	var menuFor by remember { mutableStateOf<Folder?>(null) }
 	var query by remember { mutableStateOf("") }
 	menuFor?.let { FolderMenu(it, onDismiss = { menuFor = null }) }
@@ -125,15 +124,11 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 			}
 			return@LazyVerticalGrid
 		}
-		if (continuing.isNotEmpty()) {
+		if (last != null) {
 			item(span = { GridItemSpan(2) }) {
 				Column {
 					KitSectionHead(label = stringResource(R.string.continue_watching), kicker = "続き")
-					LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-						items(continuing, key = { it.first }) { (path, mark) ->
-							ContinueCard(path, mark, onClick = { Library.videoAt(path)?.let(onPlay) })
-						}
-					}
+					ResumeButton(last.first, last.second, onClick = { onPlay(last.first) })
 				}
 			}
 		}
@@ -236,26 +231,34 @@ fun FolderCard(folder: Folder, onClick: () -> Unit, onLongClick: (() -> Unit)? =
 	}
 }
 
+/** One wide button, no frame grab: a play disc, the video, its series and where it stopped, and a thin bar underneath. */
 @Composable
-private fun ContinueCard(path: String, mark: Mark, onClick: () -> Unit) {
+private fun ResumeButton(video: Video, mark: Mark, onClick: () -> Unit) {
 	val colors = LocalPersonality.current.colors
-	val video = Library.videoAt(path)
-	KitSurface(onClick = onClick, modifier = Modifier.width(200.dp)) {
+	KitSurface(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
 		Column {
-			Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
-				AsyncImage(model = File(path), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-				Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
-					KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.fillMaxWidth().height(3.dp).clip(kitShape(2.dp)))
+			Row(
+				modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
+				verticalAlignment = Alignment.CenterVertically,
+				horizontalArrangement = Arrangement.spacedBy(14.dp),
+			) {
+				Box(Modifier.size(44.dp).clip(CircleShape).background(colors.primary), contentAlignment = Alignment.Center) {
+					Icon(ImageVector.vectorResource(R.drawable.ic_play), contentDescription = stringResource(R.string.play), tint = colors.onPrimary, modifier = Modifier.size(24.dp))
+				}
+				Column(Modifier.weight(1f)) {
+					KitText(video.title, role = KitTextRole.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, uppercase = false)
+					Spacer(Modifier.height(2.dp))
+					KitText(
+						text = buildString {
+							video.folderPath.substringAfterLast('/').takeIf { it.isNotEmpty() }?.let { append(Names.series(it)); append("  ") }
+							append(stringResource(R.string.resume_at, fmtTime(mark.positionMs)))
+							if (mark.lengthMs > 0) append(" / ${fmtTime(mark.lengthMs)}")
+						},
+						role = KitTextRole.Mono, color = colors.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+					)
 				}
 			}
-			Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-				KitText(video?.title ?: path.substringAfterLast('/'), role = KitTextRole.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, uppercase = false)
-				Spacer(Modifier.height(2.dp))
-				KitText(
-					text = (video?.folderPath?.substringAfterLast('/')?.let { Names.series(it) } ?: "") + "  " + fmtTime(mark.positionMs),
-					role = KitTextRole.Mono, color = colors.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-				)
-			}
+			KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.fillMaxWidth().height(3.dp))
 		}
 	}
 }

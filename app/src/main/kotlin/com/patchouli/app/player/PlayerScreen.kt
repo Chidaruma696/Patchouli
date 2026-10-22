@@ -309,7 +309,11 @@ fun PlayerScreen(activity: PlayerActivity) {
 			)
 		}
 		// while the TV has the video, the phone is only its remote
-		if (castState != null) CastRemote(onBackToPhone = { player.play() })
+		if (castState != null) CastRemote(onBackToPhone = { at ->
+			// the phone picks up where the TV was, not where it was paused when the TV took over
+			if (at > 0 && length > 0) { player.time = at.coerceAtMost(length); timeMs = player.time }
+			player.play()
+		})
 	}
 	if (casting) activity.currentFile?.let { file ->
 		CastSheet(path = file, title = activity.title, positionMs = player.time.coerceAtLeast(0), onDismiss = { casting = false }, onSent = { if (player.isPlaying) player.pause() })
