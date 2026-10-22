@@ -92,6 +92,9 @@
 	<string name="pip_enter">Picture in picture</string>
 	<string name="subtitles_load">Load a subtitle file…</string>
 	<string name="search_library">Search the library</string>
+	<string name="library_layout">Library view</string>
+	<string name="layout_list">List</string>
+	<string name="layout_columns">%1$d columns</string>
 	<string name="search_empty">Nothing matches</string>
 	<string name="cast_to_tv">Send to TV</string>
 	<string name="cast_searching">Looking for TVs on the network…</string>

@@ -89,6 +89,9 @@
 	<string name="pip_enter">Imagen en imagen</string>
 	<string name="subtitles_load">Cargar un archivo de subtítulos…</string>
 	<string name="search_library">Buscar en la biblioteca</string>
+	<string name="library_layout">Vista de la biblioteca</string>
+	<string name="layout_list">Lista</string>
+	<string name="layout_columns">%1$d columnas</string>
 	<string name="search_empty">Nada coincide</string>
 	<string name="cast_to_tv">Mandar a la tele</string>
 	<string name="cast_searching">Buscando teles en la red…</string>

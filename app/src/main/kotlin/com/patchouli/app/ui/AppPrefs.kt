@@ -38,6 +38,9 @@ object AppPrefs {
 	/** Whether the user has answered the root question at least once. */
 	var rootChosen by mutableStateOf(false)
 		private set
+	/** How the shelves are laid out: 0 is a list, 2 to 4 are grid columns. */
+	var libraryColumns by mutableStateOf(2)
+		private set
 
 	fun init(context: Context) {
 		val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -50,6 +53,7 @@ object AppPrefs {
 		pip = p.getBoolean("pip", true)
 		coversOnline = p.getBoolean("covers_online", true)
 		kaoBannerVisible = p.getBoolean("kao_banner", true)
+		libraryColumns = p.getInt("library_columns", 2)
 	}
 
 	private fun prefs() = PatchouliApp.instance.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -61,6 +65,7 @@ object AppPrefs {
 	fun updatePip(value: Boolean) { pip = value; prefs().edit { putBoolean("pip", value) } }
 	fun updateCoversOnline(value: Boolean) { coversOnline = value; prefs().edit { putBoolean("covers_online", value) } }
 	fun updateKaoBanner(value: Boolean) { kaoBannerVisible = value; prefs().edit { putBoolean("kao_banner", value) } }
+	fun updateLibraryColumns(value: Int) { libraryColumns = if (value == 0) 0 else value.coerceIn(2, 4); prefs().edit { putInt("library_columns", libraryColumns) } }
 	fun updateRootPath(value: String) {
 		rootPath = value.trim('/')
 		rootChosen = true

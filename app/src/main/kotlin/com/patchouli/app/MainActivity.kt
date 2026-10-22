@@ -55,6 +55,7 @@ import com.patchouli.app.ui.kit.KitTopBar
 import com.patchouli.app.ui.kit.LocalPersonality
 import com.patchouli.app.ui.kit.PatchouliTheme
 import com.patchouli.app.ui.screens.FolderScreen
+import com.patchouli.app.ui.screens.LibraryLayoutSheet
 import com.patchouli.app.ui.screens.LibraryScreen
 import com.patchouli.app.ui.screens.SettingsScreen
 import kotlinx.coroutines.launch
@@ -109,6 +110,7 @@ private fun App() {
 	}
 
 	var tab by rememberSaveable { mutableStateOf(TAB_LIBRARY) }
+	var layoutSheet by remember { mutableStateOf(false) }
 	val stack = remember { mutableStateListOf<String>() }
 	BackHandler(enabled = stack.isNotEmpty()) { stack.removeAt(stack.lastIndex) }
 
@@ -136,6 +138,16 @@ private fun App() {
 				titleAccent = "chouli",
 				subtitle = stringResource(if (tab == TAB_LIBRARY) R.string.library_kicker else R.string.settings),
 				art = painterResource(R.drawable.patchouli),
+				// grid or list, and how many across: the icon shows which one is on
+				actions = if (tab == TAB_LIBRARY) {
+					{
+						KitIconButton(
+							ImageVector.vectorResource(if (AppPrefs.libraryColumns == 0) R.drawable.ic_list else R.drawable.ic_grid),
+							stringResource(R.string.library_layout),
+							onClick = { layoutSheet = true },
+						)
+					}
+				} else null,
 			)
 		},
 		bottomBar = {
@@ -154,6 +166,7 @@ private fun App() {
 			else -> LibraryScreen(contentPadding = padding, onOpenFolder = open, onPlay = { video -> play(video, Library.siblingsOf(video)) })
 		}
 	}
+	if (layoutSheet) LibraryLayoutSheet(onDismiss = { layoutSheet = false })
 }
 
 /** First start: which folder is the library. */
