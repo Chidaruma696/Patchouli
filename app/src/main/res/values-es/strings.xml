@@ -71,6 +71,17 @@
 	<string name="sort_added">Último añadido</string>
 	<string name="hide_watched">Ocultar lo visto</string>
 	<string name="hide_watched_summary">Las estanterías sin nada pendiente y los episodios ya vistos</string>
+	<string name="skip_mode">Openings y endings</string>
+	<string name="skip_mode_summary">Dónde están lo dice AniSkip, por serie y episodio, como lo marcaron otros espectadores</string>
+	<string name="skip_button">Botón</string>
+	<string name="skip_auto">Saltarlos</string>
+	<string name="skip_never">Dejarlos</string>
+	<string name="skip_opening">Saltar opening</string>
+	<string name="skip_ending">Saltar ending</string>
+	<string name="skip_recap">Saltar resumen</string>
+	<string name="skipped_opening">Opening saltado</string>
+	<string name="skipped_ending">Ending saltado</string>
+	<string name="skipped_recap">Resumen saltado</string>
 	<string name="welcome_step_permission">primero, el permiso</string>
 	<string name="welcome_step_folder">luego, las estanterías</string>
 

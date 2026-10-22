@@ -49,6 +49,14 @@ object AppPrefs {
 	const val SORT_RECENT = "recent"
 	const val SORT_ADDED = "added"
 
+	/** Openings and endings, as AniSkip knows them: a button to skip them, skipped on their own, or left alone. */
+	var skipMode by mutableStateOf(SKIP_BUTTON)
+		private set
+
+	const val SKIP_BUTTON = "button"
+	const val SKIP_AUTO = "auto"
+	const val SKIP_NEVER = "never"
+
 	fun init(context: Context) {
 		val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 		rootPath = p.getString("root_path", "") ?: ""
@@ -62,6 +70,7 @@ object AppPrefs {
 		libraryColumns = p.getInt("library_columns", 2)
 		librarySort = p.getString("library_sort", SORT_NAME) ?: SORT_NAME
 		hideWatched = p.getBoolean("hide_watched", false)
+		skipMode = p.getString("skip_mode", SKIP_BUTTON) ?: SKIP_BUTTON
 	}
 
 	private fun prefs() = PatchouliApp.instance.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -75,6 +84,7 @@ object AppPrefs {
 	fun updateLibraryColumns(value: Int) { libraryColumns = if (value == 0) 0 else value.coerceIn(2, 4); prefs().edit { putInt("library_columns", libraryColumns) } }
 	fun updateLibrarySort(value: String) { librarySort = value; prefs().edit { putString("library_sort", value) } }
 	fun updateHideWatched(value: Boolean) { hideWatched = value; prefs().edit { putBoolean("hide_watched", value) } }
+	fun updateSkipMode(value: String) { skipMode = value; prefs().edit { putString("skip_mode", value) } }
 	fun updateRootPath(value: String) {
 		rootPath = value.trim('/')
 		rootChosen = true

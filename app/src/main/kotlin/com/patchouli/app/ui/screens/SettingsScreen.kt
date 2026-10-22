@@ -100,6 +100,19 @@ fun SettingsScreen(contentPadding: PaddingValues, onRescan: () -> Unit) {
 				modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 12.dp),
 				height = 34.dp,
 			)
+			KitListRow(title = stringResource(R.string.skip_mode), subtitle = stringResource(R.string.skip_mode_summary), showDivider = false)
+			KitSegmented(
+				selected = AppPrefs.skipMode,
+				items = listOf(
+					KitSegmentedItem(AppPrefs.SKIP_BUTTON, stringResource(R.string.skip_button)),
+					KitSegmentedItem(AppPrefs.SKIP_AUTO, stringResource(R.string.skip_auto)),
+					KitSegmentedItem(AppPrefs.SKIP_NEVER, stringResource(R.string.skip_never)),
+				),
+				onSelect = { AppPrefs.updateSkipMode(it) },
+				modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 12.dp),
+				height = 34.dp,
+				fillWidth = true,
+			)
 			KitListRow(title = stringResource(R.string.gestures), subtitle = stringResource(R.string.gestures_summary))
 		}
 

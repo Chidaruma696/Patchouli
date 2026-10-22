@@ -72,6 +72,17 @@
 	<string name="sort_added">Last added</string>
 	<string name="hide_watched">Hide what is watched</string>
 	<string name="hide_watched_summary">Shelves with nothing left, and the episodes already seen</string>
+	<string name="skip_mode">Openings and endings</string>
+	<string name="skip_mode_summary">Where they are comes from AniSkip, by series and episode, as other viewers marked them</string>
+	<string name="skip_button">Button</string>
+	<string name="skip_auto">Skip them</string>
+	<string name="skip_never">Leave them</string>
+	<string name="skip_opening">Skip opening</string>
+	<string name="skip_ending">Skip ending</string>
+	<string name="skip_recap">Skip recap</string>
+	<string name="skipped_opening">Opening skipped</string>
+	<string name="skipped_ending">Ending skipped</string>
+	<string name="skipped_recap">Recap skipped</string>
 	<string name="welcome_step_permission">first, the permission</string>
 	<string name="welcome_step_folder">then, the shelves</string>
 

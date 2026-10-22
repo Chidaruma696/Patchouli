@@ -7,6 +7,7 @@ import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import com.patchouli.app.catalog.AniSkip
 import com.patchouli.app.catalog.Episodes
 import com.patchouli.app.catalog.Metadata
 import com.patchouli.app.library.Progress
@@ -24,6 +25,7 @@ class PatchouliApp : Application(), SingletonImageLoader.Factory {
 		Progress.init(this)
 		Metadata.init(this)
 		Episodes.init(this)
+		AniSkip.init(this)
 		TrackPrefs.init(this)
 	}
 

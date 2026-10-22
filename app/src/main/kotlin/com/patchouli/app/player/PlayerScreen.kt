@@ -150,14 +150,14 @@ fun PlayerScreen(activity: PlayerActivity) {
 		val listener = MediaPlayer.EventListener { event ->
 			when (event.type) {
 				MediaPlayer.Event.Opening -> { buffering = true; error = false }
-				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams(); activity.applyRememberedTracks() }
+				MediaPlayer.Event.Playing -> { isPlaying = true; buffering = false; error = false; player.rate = speed; activity.updatePipParams(); activity.applyRememberedTracks(); activity.syncSession(true, speed) }
 				// a track showed up: maybe the one the series was last watched with
 				MediaPlayer.Event.ESAdded -> activity.applyRememberedTracks()
-				MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped -> { isPlaying = false; activity.updatePipParams() }
+				MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped -> { isPlaying = false; activity.updatePipParams(); activity.syncSession(false, speed) }
 				MediaPlayer.Event.Buffering -> buffering = event.buffering < 100f
 				MediaPlayer.Event.PositionChanged -> position = event.positionChanged
 				MediaPlayer.Event.TimeChanged -> timeMs = event.timeChanged
-				MediaPlayer.Event.LengthChanged -> length = event.lengthChanged
+				MediaPlayer.Event.LengthChanged -> { length = event.lengthChanged; activity.updateSessionMetadata(event.lengthChanged) }
 				MediaPlayer.Event.EncounteredError -> { buffering = false; error = true }
 				// a tick in the middle for a second: this one is done
 				MediaPlayer.Event.EndReached -> { hud = Hud(R.drawable.ic_check, "✓  $watchedLabel"); activity.onEnded() }
@@ -186,6 +186,26 @@ fun PlayerScreen(activity: PlayerActivity) {
 		while (isPlaying) {
 			delay(5_000)
 			activity.saveProgress()
+		}
+	}
+
+	// the opening or the ending we are in right now, if AniSkip knows where it is (ending before its last second, so a seek to it does not land back inside)
+	val skipNow = activity.skips.firstOrNull { timeMs >= it.startMs && timeMs < it.endMs - 1_000 }
+	val skipLabel = skipNow?.let { stringResource(if (it.isOpening) R.string.skip_opening else if (it.isEnding) R.string.skip_ending else R.string.skip_recap) }
+	val skippedLabel = skipNow?.let { stringResource(if (it.isOpening) R.string.skipped_opening else if (it.isEnding) R.string.skipped_ending else R.string.skipped_recap) }
+	// which ones were already skipped on their own in this file: each gets one chance, so a seek back into it is respected
+	val autoSkipped = remember(activity.index) { mutableSetOf<Long>() }
+	fun skip(interval: com.patchouli.app.catalog.SkipInterval, word: String) {
+		player.time = interval.endMs
+		timeMs = interval.endMs
+		hud = Hud(R.drawable.ic_next, word)
+	}
+	LaunchedEffect(skipNow?.startMs, AppPrefs.skipMode) {
+		val interval = skipNow ?: return@LaunchedEffect
+		if (AppPrefs.skipMode == AppPrefs.SKIP_AUTO && autoSkipped.add(interval.startMs)) {
+			// a breath after it starts, so the cut is not felt as a glitch
+			delay(400)
+			skip(interval, skippedLabel.orEmpty())
 		}
 	}
 
@@ -301,6 +321,13 @@ fun PlayerScreen(activity: PlayerActivity) {
 		}
 
 		hud?.let { HudView(it) }
+
+		// the skip stamp, bottom right, above the strip when the controls are out; never while locked
+		if (skipNow != null && skipLabel != null && !locked && AppPrefs.skipMode == AppPrefs.SKIP_BUTTON) {
+			Box(Modifier.fillMaxSize().padding(end = 16.dp, bottom = if (controlsVisible) 124.dp else 24.dp), contentAlignment = Alignment.BottomEnd) {
+				KitButton(onClick = { skip(skipNow, skippedLabel.orEmpty()) }, label = skipLabel, trailingIcon = ImageVector.vectorResource(R.drawable.ic_next), emphasized = true)
+			}
+		}
 
 		// it picked up where it was left days ago: a caption says so for a while, with the way back to the start
 		activity.staleResume?.let { mark ->

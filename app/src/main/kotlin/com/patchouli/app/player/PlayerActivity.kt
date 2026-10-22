@@ -11,6 +11,12 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -27,13 +33,20 @@ import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.patchouli.app.BuildConfig
 import com.patchouli.app.R
+import com.patchouli.app.catalog.AniSkip
+import com.patchouli.app.catalog.Metadata
+import com.patchouli.app.catalog.SkipInterval
+import com.patchouli.app.library.Library
 import com.patchouli.app.library.Mark
 import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.PatchouliTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.videolan.libvlc.LibVLC
 import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
@@ -73,6 +86,37 @@ class PlayerActivity : ComponentActivity() {
 	/** The bookmark this file resumed from when it is old enough that the user may rather start over; null otherwise. */
 	var staleResume by mutableStateOf<Mark?>(null)
 		private set
+	/** The opening, the ending, a recap of the current episode, as AniSkip has them; empty until known, or when nobody marked it. */
+	var skips by mutableStateOf<List<SkipInterval>>(emptyList())
+		private set
+	private var skipJob: Job? = null
+
+	// --- the system's side: the media session (headset buttons, Bluetooth, the lock screen) and the audio focus ---
+
+	private lateinit var session: MediaSession
+	private lateinit var audioManager: AudioManager
+	private var focusRequest: AudioFocusRequest? = null
+	/** Paused by a call or another app's sound: resumes when the focus comes back. */
+	private var pausedByFocus = false
+
+	private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+		when (change) {
+			AudioManager.AUDIOFOCUS_LOSS -> { pausedByFocus = false; if (player.isPlaying) player.pause() }
+			AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> { if (player.isPlaying) { pausedByFocus = true; player.pause() } }
+			AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> player.volume = 30
+			AudioManager.AUDIOFOCUS_GAIN -> {
+				player.volume = 100
+				if (pausedByFocus) { pausedByFocus = false; player.play() }
+			}
+		}
+	}
+
+	/** Headphones pulled out: nobody wants the speaker to take over. */
+	private val noisyReceiver = object : BroadcastReceiver() {
+		override fun onReceive(context: Context, intent: Intent) {
+			if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY && ::player.isInitialized && player.isPlaying) player.pause()
+		}
+	}
 
 	/** The file on disk being played, or null when another app handed us a content uri (a TV cannot fetch that). */
 	val currentFile: String? get() = currentPath
@@ -122,6 +166,21 @@ class PlayerActivity : ComponentActivity() {
 		if (BuildConfig.DEBUG) options += "-vv"
 		libVlc = LibVLC(this, options)
 		player = MediaPlayer(libVlc)
+		audioManager = getSystemService(AudioManager::class.java)
+		session = MediaSession(this, "Patchouli").apply {
+			setCallback(object : MediaSession.Callback() {
+				override fun onPlay() { player.play() }
+				override fun onPause() { player.pause() }
+				override fun onSkipToNext() { next() }
+				override fun onSkipToPrevious() { previous() }
+				override fun onSeekTo(pos: Long) { player.time = pos }
+				override fun onFastForward() { player.time = (player.time + AppPrefs.seekStepSec * 1000L).coerceAtMost(player.length) }
+				override fun onRewind() { player.time = (player.time - AppPrefs.seekStepSec * 1000L).coerceAtLeast(0) }
+				override fun onStop() { finish() }
+			})
+			isActive = true
+		}
+		registerReceiver(noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
 		load(index, autoplay = false, fromMs = null)
 
 		val filter = IntentFilter(ACTION_PIP)
@@ -159,8 +218,69 @@ class PlayerActivity : ComponentActivity() {
 		media.release()
 		title = path?.let { Names.title(it.substringAfterLast('/')) } ?: contentUri?.lastPathSegment?.let { Names.title(it) }.orEmpty()
 		subtitleFiles = path?.let { attachSubtitles(File(it)) }.orEmpty()
+		lookupSkips(path)
+		updateSessionMetadata(mark?.lengthMs ?: 0L)
 		Log.i(TAG, "play ${path ?: contentUri} hw=$hardware from=$start subs=${subtitleFiles.size}")
 		if (autoplay) player.play()
+	}
+
+	// --- openings and endings ---
+
+	/** Asks AniSkip for the current episode, when the folder is a known series and the file carries an episode number. */
+	private fun lookupSkips(path: String?) {
+		skipJob?.cancel()
+		skips = emptyList()
+		if (path == null || !AppPrefs.coversOnline || AppPrefs.skipMode == AppPrefs.SKIP_NEVER) return
+		val video = Library.videoAt(path) ?: return
+		val episode = video.episode ?: return
+		val malId = Library.find(video.folderPath)?.let { Metadata[it] }?.anime?.malId ?: return
+		skipJob = lifecycleScope.launch {
+			val found = runCatching { AniSkip.intervals(malId, episode, video.durationMs) }.onFailure { Log.w(TAG, "aniskip", it) }.getOrDefault(emptyList())
+			if (currentPath == path) skips = found
+		}
+	}
+
+	// --- the media session ---
+
+	/** What the lock screen and the headset know: playing or paused, where, and how fast. */
+	fun syncSession(playing: Boolean, speed: Float) {
+		if (!::session.isInitialized) return
+		val actions = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_STOP or
+			PlaybackState.ACTION_SEEK_TO or PlaybackState.ACTION_FAST_FORWARD or PlaybackState.ACTION_REWIND or
+			(if (hasNext) PlaybackState.ACTION_SKIP_TO_NEXT else 0L) or (if (hasPrevious) PlaybackState.ACTION_SKIP_TO_PREVIOUS else 0L)
+		val state = PlaybackState.Builder()
+			.setActions(actions)
+			.setState(if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED, player.time.coerceAtLeast(0), if (playing) speed else 0f)
+			.build()
+		runCatching { session.setPlaybackState(state) }
+		if (playing) requestFocus()
+	}
+
+	fun updateSessionMetadata(lengthMs: Long) {
+		if (!::session.isInitialized) return
+		val series = currentPath?.let { Library.videoAt(it) }?.let { Library.find(it.folderPath) }?.let { Names.series(it.name) }
+		val metadata = MediaMetadata.Builder()
+			.putString(MediaMetadata.METADATA_KEY_TITLE, title)
+			.putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, title)
+			.apply { if (series != null) { putString(MediaMetadata.METADATA_KEY_ARTIST, series); putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, series) } }
+			.apply { if (lengthMs > 0) putLong(MediaMetadata.METADATA_KEY_DURATION, lengthMs) }
+			.build()
+		runCatching { session.setMetadata(metadata) }
+	}
+
+	private fun requestFocus() {
+		if (focusRequest != null) return
+		val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+			.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build())
+			.setOnAudioFocusChangeListener(focusListener)
+			.build()
+		focusRequest = request
+		if (audioManager.requestAudioFocus(request) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) focusRequest = null
+	}
+
+	private fun abandonFocus() {
+		focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+		focusRequest = null
 	}
 
 	/** The user would rather start this one from the beginning after all. */
@@ -347,6 +467,9 @@ class PlayerActivity : ComponentActivity() {
 	override fun onDestroy() {
 		super.onDestroy()
 		runCatching { unregisterReceiver(pipReceiver) }
+		runCatching { unregisterReceiver(noisyReceiver) }
+		if (::session.isInitialized) { session.isActive = false; session.release() }
+		if (::audioManager.isInitialized) abandonFocus()
 		if (::player.isInitialized) {
 			saveProgress()
 			player.stop()
