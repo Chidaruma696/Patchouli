@@ -3,9 +3,13 @@ package com.patchouli.app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -15,10 +19,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.sp
+import com.patchouli.app.ui.kit.KitScreentone
+import com.patchouli.app.ui.kit.KitSurface
+import com.patchouli.app.ui.kit.KitSurfaceElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,6 +72,8 @@ import com.patchouli.app.ui.screens.FolderScreen
 import com.patchouli.app.ui.screens.LibraryLayoutSheet
 import com.patchouli.app.ui.screens.LibraryScreen
 import com.patchouli.app.ui.screens.SettingsScreen
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAB_LIBRARY = "library"
@@ -65,12 +81,31 @@ private const val TAB_SETTINGS = "settings"
 
 class MainActivity : ComponentActivity() {
 
+	/** A download finished, a file was deleted: the MediaStore says so, and the shelves follow after a short pause (one scan for a burst of changes). */
+	private var pendingScan: Job? = null
+	private val mediaObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+		override fun onChange(selfChange: Boolean, uri: Uri?) {
+			if (!hasPermission() || Library.root == null) return
+			pendingScan?.cancel()
+			pendingScan = lifecycleScope.launch {
+				delay(1_500)
+				Library.scan(this@MainActivity)
+			}
+		}
+	}
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		WindowCompat.setDecorFitsSystemWindows(window, false)
+		contentResolver.registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, mediaObserver)
 		setContent {
 			PatchouliTheme { App() }
 		}
+	}
+
+	override fun onDestroy() {
+		super.onDestroy()
+		contentResolver.unregisterContentObserver(mediaObserver)
 	}
 
 	override fun onResume() {
@@ -169,43 +204,53 @@ private fun App() {
 	if (layoutSheet) LibraryLayoutSheet(onDismiss = { layoutSheet = false })
 }
 
+/**
+ * The first pages of the book: Patchouli herself, big, then a panel with the question and its buttons.
+ * Used for the permission and for the choice of the library folder.
+ */
+@Composable
+private fun WelcomePage(step: String, title: String, text: String, buttons: @Composable ColumnScope.() -> Unit) {
+	val colors = LocalPersonality.current.colors
+	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli", subtitle = step) }) { padding ->
+		Column(
+			modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
+			horizontalAlignment = Alignment.CenterHorizontally,
+			verticalArrangement = Arrangement.spacedBy(18.dp),
+		) {
+			Image(painterResource(R.drawable.patchouli), contentDescription = null, modifier = Modifier.height(200.dp))
+			KitSurface(modifier = Modifier.fillMaxWidth(), elevation = KitSurfaceElevation.Raised, screentone = KitScreentone.Corner, contentPadding = PaddingValues(20.dp)) {
+				Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+					KitText(title, role = KitTextRole.Display, fontSize = 26.sp, lineHeight = 30.sp)
+					KitText(text, role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false)
+					buttons()
+				}
+			}
+		}
+	}
+}
+
 /** First start: which folder is the library. */
 @Composable
 private fun RootScreen() {
-	val colors = LocalPersonality.current.colors
 	val pick = rememberRootPicker()
-	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli", art = painterResource(R.drawable.patchouli)) }) { padding ->
-		Column(
-			modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
-			verticalArrangement = Arrangement.spacedBy(14.dp),
-		) {
-			KitText(stringResource(R.string.root_title), role = KitTextRole.Display)
-			KitText(stringResource(R.string.root_text), role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false)
-			KitButton(onClick = pick, label = stringResource(R.string.root_choose), emphasized = true)
-			KitButton(onClick = { AppPrefs.updateRootPath("") }, label = stringResource(R.string.root_whole_phone), variant = KitButtonVariant.Text)
-		}
+	WelcomePage(step = stringResource(R.string.welcome_step_folder), title = stringResource(R.string.root_title), text = stringResource(R.string.root_text)) {
+		KitButton(onClick = pick, label = stringResource(R.string.root_choose), emphasized = true, modifier = Modifier.fillMaxWidth())
+		KitButton(onClick = { AppPrefs.updateRootPath("") }, label = stringResource(R.string.root_whole_phone), variant = KitButtonVariant.Outline, modifier = Modifier.fillMaxWidth())
 	}
 }
 
 @Composable
 private fun PermissionScreen(onAsk: () -> Unit) {
 	val context = LocalContext.current
-	val colors = LocalPersonality.current.colors
-	KitScaffold(topBar = { KitTopBar(title = stringResource(R.string.app_name), titleAccent = "chouli", art = painterResource(R.drawable.patchouli)) }) { padding ->
-		Column(
-			modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
-			verticalArrangement = Arrangement.spacedBy(14.dp),
-		) {
-			KitText(stringResource(R.string.permission_title), role = KitTextRole.Display)
-			KitText(stringResource(R.string.permission_text), role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false)
-			KitButton(onClick = onAsk, label = stringResource(R.string.permission_button), emphasized = true)
-			KitButton(
-				onClick = {
-					context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
-				},
-				label = stringResource(R.string.permission_settings),
-				variant = KitButtonVariant.Text,
-			)
-		}
+	WelcomePage(step = stringResource(R.string.welcome_step_permission), title = stringResource(R.string.permission_title), text = stringResource(R.string.permission_text)) {
+		KitButton(onClick = onAsk, label = stringResource(R.string.permission_button), emphasized = true, modifier = Modifier.fillMaxWidth())
+		KitButton(
+			onClick = {
+				context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
+			},
+			label = stringResource(R.string.permission_settings),
+			variant = KitButtonVariant.Text,
+			modifier = Modifier.fillMaxWidth(),
+		)
 	}
 }
