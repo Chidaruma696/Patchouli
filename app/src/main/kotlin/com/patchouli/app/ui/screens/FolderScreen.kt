@@ -40,6 +40,7 @@ import com.patchouli.app.library.Folder
 import com.patchouli.app.library.Names
 import com.patchouli.app.library.Progress
 import com.patchouli.app.library.Video
+import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
 import com.patchouli.app.ui.kit.KitButtonVariant
@@ -69,7 +70,11 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 	val videos = remember(folder) { folder.sortedVideos() }
 	var menu by remember { mutableStateOf(false) }
 	var menuFor by remember { mutableStateOf<Folder?>(null) }
+	var layoutSheet by remember { mutableStateOf(false) }
 	val title = Names.series(folder.name)
+	// the same list-or-grid setting as the home screen
+	val columns = AppPrefs.libraryColumns
+	val list = columns == 0
 
 	KitScaffold(
 		topBar = {
@@ -77,7 +82,12 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 				title = title,
 				subtitle = folder.path,
 				leading = { KitIconButton(ImageVector.vectorResource(R.drawable.ic_back), stringResource(R.string.back), onClick = onBack) },
-				actions = { KitIconButton(ImageVector.vectorResource(R.drawable.ic_more), stringResource(R.string.more), onClick = { menu = true }) },
+				actions = {
+					if (subfolders.isNotEmpty()) {
+						KitIconButton(ImageVector.vectorResource(if (list) R.drawable.ic_list else R.drawable.ic_grid), stringResource(R.string.library_layout), onClick = { layoutSheet = true })
+					}
+					KitIconButton(ImageVector.vectorResource(R.drawable.ic_more), stringResource(R.string.more), onClick = { menu = true })
+				},
 			)
 		},
 	) { padding ->
@@ -92,10 +102,21 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 			if (subfolders.isNotEmpty()) {
 				item { KitSectionHead(label = stringResource(R.string.folders), kicker = "書棚") }
 				item { CoversBanner(subfolders) }
-				items(subfolders.chunked(2)) { row ->
-					Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-						row.forEach { sub -> Box(Modifier.weight(1f)) { FolderCard(sub, onClick = { onOpenFolder(sub) }, onLongClick = { menuFor = sub }) } }
-						if (row.size == 1) Spacer(Modifier.weight(1f))
+				if (list) {
+					item {
+						KitListContainer {
+							subfolders.forEachIndexed { index, sub ->
+								FolderRow(sub, showDivider = index < subfolders.lastIndex, onClick = { onOpenFolder(sub) }, onLongClick = { menuFor = sub })
+							}
+						}
+					}
+				} else {
+					val gap = if (columns >= 4) 8.dp else 12.dp
+					items(subfolders.chunked(columns)) { row ->
+						Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+							row.forEach { sub -> Box(Modifier.weight(1f)) { FolderCard(sub, compact = columns >= 3, onClick = { onOpenFolder(sub) }, onLongClick = { menuFor = sub }) } }
+							repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+						}
 					}
 				}
 			}
@@ -114,6 +135,7 @@ fun FolderScreen(folder: Folder, onOpenFolder: (Folder) -> Unit, onPlay: (Video,
 
 	if (menu) FolderMenu(folder, onDismiss = { menu = false })
 	menuFor?.let { sub -> FolderMenu(sub, onDismiss = { menuFor = null }) }
+	if (layoutSheet) LibraryLayoutSheet(onDismiss = { layoutSheet = false })
 }
 
 @Composable
