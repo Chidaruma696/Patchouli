@@ -2,6 +2,7 @@ package com.patchouli.app.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,8 +101,9 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenFolder: (Folder) -> Unit,
 			top = contentPadding.calculateTopPadding() + 4.dp,
 			bottom = contentPadding.calculateBottomPadding() + 24.dp,
 		),
-		horizontalArrangement = Arrangement.spacedBy(if (list) 0.dp else if (columns >= 4) 8.dp else 12.dp),
-		verticalArrangement = Arrangement.spacedBy(if (list) 0.dp else if (columns >= 4) 8.dp else 12.dp),
+		// room for the 6 dp ink shadow of every panel, whatever the count across
+		horizontalArrangement = Arrangement.spacedBy(if (list) 0.dp else if (columns >= 4) 10.dp else 14.dp),
+		verticalArrangement = Arrangement.spacedBy(if (list) 0.dp else if (columns >= 4) 10.dp else 14.dp),
 	) {
 		fun wide(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 		/** The folders, as cards across or as one list of rows. */
@@ -253,7 +255,7 @@ private fun FolderCover(folder: Folder, modifier: Modifier = Modifier, note: Boo
 		}
 		if (note && word != null) {
 			Row(
-				modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).clip(kitShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 7.dp, vertical = 4.dp),
+				modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 7.dp, vertical = 4.dp),
 				verticalAlignment = Alignment.CenterVertically,
 				horizontalArrangement = Arrangement.spacedBy(5.dp),
 			) {
@@ -304,7 +306,7 @@ fun FolderRow(folder: Folder, showDivider: Boolean, onClick: () -> Unit, onLongC
 		onClick = onClick,
 		onLongClick = onLongClick,
 		showDivider = showDivider,
-		trailing = { FolderCover(folder, modifier = Modifier.width(40.dp).aspectRatio(2f / 3f).clip(kitShape(6.dp)), note = false) },
+		trailing = { FolderCover(folder, modifier = Modifier.width(40.dp).aspectRatio(2f / 3f).border(2.dp, LocalPersonality.current.colors.outline), note = false) },
 	)
 }
 

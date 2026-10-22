@@ -1,6 +1,7 @@
 package com.patchouli.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -147,7 +148,7 @@ private fun AnimeHeader(anime: com.patchouli.app.catalog.Anime, cover: Any?, wat
 			Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
 				AsyncImage(
 					model = cover ?: anime.cover, contentDescription = null, contentScale = ContentScale.Crop,
-					modifier = Modifier.width(96.dp).aspectRatio(2f / 3f).clip(kitShape(8.dp)).background(colors.surfaceVariant),
+					modifier = Modifier.width(96.dp).aspectRatio(2f / 3f).background(colors.surfaceVariant).border(2.dp, colors.outline),
 				)
 				Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
 					KitText(anime.title, role = KitTextRole.Title, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -193,7 +194,7 @@ fun VideoRow(video: Video, showDivider: Boolean, onClick: () -> Unit) {
 		onClick = onClick,
 		showDivider = showDivider,
 		trailing = {
-			Box(Modifier.width(96.dp).aspectRatio(16f / 9f).clip(kitShape(6.dp)).background(Color.Black)) {
+			Box(Modifier.width(96.dp).aspectRatio(16f / 9f).background(Color.Black).border(2.dp, colors.outline)) {
 				AsyncImage(model = File(video.path), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
 				if (mark != null && mark.fraction > 0f) {
 					KitLinearProgress(progress = { mark.fraction }, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp))
