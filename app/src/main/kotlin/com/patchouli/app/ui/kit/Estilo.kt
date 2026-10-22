@@ -3,6 +3,7 @@
  */
 package com.patchouli.app.ui.kit
 
+import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -13,11 +14,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
@@ -175,22 +179,38 @@ object Themes {
 	fun byId(id: String): CharacterTheme = all.firstOrNull { it.id == id } ?: all.first { it.id == DEFAULT }
 }
 
-fun Palette.toColors(dark: Boolean): PersonalityColors = PersonalityColors(
-	primary = Color(primary), onPrimary = Color(onPrimary),
-	secondary = Color(secondary), onSecondary = Color(onSecondary),
-	gold = Color(gold), onGold = Color(onGold),
-	background = Color(page), onBackground = Color(ink),
-	surface = Color(panel), onSurface = Color(ink),
-	surfaceVariant = Color(well), onSurfaceVariant = Color(muted),
-	outline = Color(ink),
-	outlineVariant = Color(muted),
-	divider = Color(ink).copy(alpha = 0.4f),
-	error = Color(error), onError = Color(onError),
-	// day: the block is ink; night: it is black, a step darker than the page
-	shadow = if (dark) Color(0xFF000000) else Color(ink),
-	screentoneOpacity = if (dark) 0.20f else 0.16f,
-	gridOpacity = if (dark) 0.06f else 0.05f,
+/** The paper of the manga and its ink: Komi's DAY (cream page, warm black ink) and NIGHT (near-black page, cream ink). */
+private data class PaperInk(
+	val page: Long, val panel: Long, val well: Long, val ink: Long, val muted: Long, val shadow: Long,
+	val error: Long, val onError: Long, val screentoneOpacity: Float, val gridOpacity: Float,
 )
+
+private val DayPaper = PaperInk(0xFFF1EADC, 0xFFFAF5EA, 0xFFE7DEC9, 0xFF1B150D, 0xFF695F50, 0xFF1B150D, 0xFFB3261E, 0xFFFFFFFF, 0.16f, 0.05f)
+private val NightPaper = PaperInk(0xFF0C0A07, 0xFF16120C, 0xFF211B12, 0xFFF0E9DA, 0xFF968B77, 0xFF000000, 0xFFFF6B5E, 0xFF1B150D, 0.20f, 0.06f)
+
+/**
+ * The page is always Komi's paper; the character only lends the accents (primary, secondary,
+ * gold), like the one spot colour of a printed cover. The palette's own page and ink are kept for
+ * the swatches in Settings.
+ */
+fun Palette.toColors(dark: Boolean): PersonalityColors {
+	val paper = if (dark) NightPaper else DayPaper
+	return PersonalityColors(
+		primary = Color(primary), onPrimary = Color(onPrimary),
+		secondary = Color(secondary), onSecondary = Color(onSecondary),
+		gold = Color(gold), onGold = Color(onGold),
+		background = Color(paper.page), onBackground = Color(paper.ink),
+		surface = Color(paper.panel), onSurface = Color(paper.ink),
+		surfaceVariant = Color(paper.well), onSurfaceVariant = Color(paper.muted),
+		outline = Color(paper.ink),
+		outlineVariant = Color(paper.muted),
+		divider = Color(paper.ink).copy(alpha = 0.4f),
+		error = Color(paper.error), onError = Color(paper.onError),
+		shadow = Color(paper.shadow),
+		screentoneOpacity = paper.screentoneOpacity,
+		gridOpacity = paper.gridOpacity,
+	)
+}
 
 // ---------------------------------------------------------------- type and this app's style
 
@@ -299,14 +319,15 @@ object ThemePrefs {
 
 	var themeId by mutableStateOf(Themes.DEFAULT)
 		private set
-	var mode by mutableStateOf("system") // system | light | dark
+	/** system | light | dark; a manga opens on the day paper, as Komi does, until told otherwise. */
+	var mode by mutableStateOf("light")
 		private set
 
 	fun init(context: Context) {
 		this.context = context.applicationContext
 		val prefs = this.context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 		themeId = prefs.getString("theme_id", Themes.DEFAULT) ?: Themes.DEFAULT
-		mode = prefs.getString("mode", "system") ?: "system"
+		mode = prefs.getString("mode", "light") ?: "light"
 	}
 
 	fun selectTheme(id: String) {
@@ -342,6 +363,18 @@ fun PatchouliTheme(content: @Composable () -> Unit) {
 	}
 	val scheme = remember(personality) { personality.colors.toMaterialColorScheme() }
 	val status = remember(personality) { StatusColors(personality.colors.gold, personality.colors.gold, personality.colors.error) }
+	// the clock and the icons of the system bars in ink on the day paper, in cream on the night one
+	val view = LocalView.current
+	if (!view.isInEditMode) {
+		SideEffect {
+			(view.context as? Activity)?.window?.let { window ->
+				WindowCompat.getInsetsController(window, view).apply {
+					isAppearanceLightStatusBars = !dark
+					isAppearanceLightNavigationBars = !dark
+				}
+			}
+		}
+	}
 	CompositionLocalProvider(
 		LocalPersonality provides personality,
 		LocalStatusColors provides status,
