@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 /** A stretch of an episode worth skipping: the opening, the ending, a recap. */
 @Serializable
@@ -30,7 +31,7 @@ object AniSkip {
 	private const val KEEP_EMPTY_MS = 24L * 3600 * 1000
 
 	@Serializable private data class Interval(val startTime: Double, val endTime: Double)
-	@Serializable private data class Result(val interval: Interval, val skipType: String)
+	@Serializable private data class Result(val interval: Interval, val skipType: String, val episodeLength: Double = 0.0)
 	@Serializable private data class Response(val found: Boolean = false, val results: List<Result> = emptyList())
 	@Serializable private data class Stored(val at: Long, val intervals: List<SkipInterval>)
 
@@ -54,20 +55,36 @@ object AniSkip {
 			val keep = if (have.intervals.isEmpty()) KEEP_EMPTY_MS else KEEP_FOUND_MS
 			if (System.currentTimeMillis() - have.at < keep) return@withContext have.intervals
 		}
-		// the service filters its answers by the length of the episode: ours, in seconds
+		// the service keeps the marks of every cut of an episode and answers for the one whose length matches ours
 		val length = if (lengthMs > 0) lengthMs / 1000.0 else 0.0
-		val url = "$URL/$malId/$episode?types[]=op&types[]=ed&types[]=mixed-op&types[]=mixed-ed&types[]=recap&episodeLength=$length"
-		val request = Request.Builder().url(url).header("Accept", "application/json").header("User-Agent", "Patchouli/${com.patchouli.app.BuildConfig.VERSION_NAME}").build()
-		val (code, body) = client.newCall(request).execute().use { it.code to it.body.string() }
-		val intervals = when (code) {
-			200 -> json.decodeFromString<Response>(body).results.map { SkipInterval((it.interval.startTime * 1000).toLong(), (it.interval.endTime * 1000).toLong(), it.skipType) }.sortedBy { it.startMs }
-			404 -> emptyList()
-			else -> error("AniSkip: HTTP $code")
+		var results = fetch(malId, episode, length)
+		if (results.isEmpty() && length > 0) {
+			// no cut of that exact length: of every cut it has, the one closest to ours, if it is close enough to trust
+			val all = fetch(malId, episode, 0.0)
+			val nearest = all.minByOrNull { abs(it.episodeLength - length) }
+			if (nearest != null && abs(nearest.episodeLength - length) <= length * LENGTH_TOLERANCE) {
+				results = all.filter { abs(it.episodeLength - nearest.episodeLength) < 1.0 }
+			}
 		}
+		val intervals = results.map { SkipInterval((it.interval.startTime * 1000).toLong(), (it.interval.endTime * 1000).toLong(), it.skipType) }.sortedBy { it.startMs }
 		Log.i(TAG, "$key: ${intervals.size} intervals")
 		val stored = Stored(System.currentTimeMillis(), intervals)
 		synchronized(cache) { cache[key] = stored }
 		runCatching { file.writeText(json.encodeToString(stored)) }
 		intervals
+	}
+
+	/** How far from ours the length of a cut may be and still be taken for the same one (3 %: a preview or a sponsor card). */
+	private const val LENGTH_TOLERANCE = 0.03
+
+	private fun fetch(malId: Int, episode: Int, length: Double): List<Result> {
+		val url = "$URL/$malId/$episode?types[]=op&types[]=ed&types[]=mixed-op&types[]=mixed-ed&types[]=recap&episodeLength=$length"
+		val request = Request.Builder().url(url).header("Accept", "application/json").header("User-Agent", "Patchouli/${com.patchouli.app.BuildConfig.VERSION_NAME}").build()
+		val (code, body) = client.newCall(request).execute().use { it.code to it.body.string() }
+		return when (code) {
+			200 -> json.decodeFromString<Response>(body).results
+			404 -> emptyList()
+			else -> error("AniSkip: HTTP $code")
+		}
 	}
 }
