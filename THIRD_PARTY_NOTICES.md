@@ -28,7 +28,8 @@ This image is **not** under the Apache license of the rest of the project: it ma
 
 | Component | Use in Patchouli | License |
 | --- | --- | --- |
-| [Lora](https://github.com/cyrealtype/Lora-Cyrillic) (Cyreal) | Headings | SIL Open Font License 1.1 |
+| [Komi Store](https://github.com/kurikomi-labs/komi-store) (kurikomi-labs) | The manga look of the interface: the drawing code of the kit (`app/src/main/kotlin/com/patchouli/app/ui/kit/`, hard shadows, stamps, tone sheets, metrics and typography) is ported from its design system | Apache 2.0 |
+| [Anton](https://fonts.google.com/specimen/Anton) (Vernon Adams) | Headlines and stamps | SIL Open Font License 1.1 |
 | [Noto Sans](https://fonts.google.com/noto) (Google) | Body text and labels | SIL Open Font License 1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (JetBrains) | Times and monospaced text | SIL Open Font License 1.1 |
 | [Material Design Icons](https://fonts.google.com/icons) (Google) | Icons | Apache 2.0 |

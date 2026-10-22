@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.patchouli.app.R
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
@@ -32,10 +35,14 @@ import com.patchouli.app.ui.kit.KitButtonVariant
 import com.patchouli.app.ui.kit.KitCircularProgress
 import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitListRow
+import com.patchouli.app.ui.kit.KitScreentone
 import com.patchouli.app.ui.kit.KitSheet
+import com.patchouli.app.ui.kit.KitSurface
+import com.patchouli.app.ui.kit.KitSurfaceElevation
 import com.patchouli.app.ui.kit.KitText
 import com.patchouli.app.ui.kit.KitTextRole
 import com.patchouli.app.ui.kit.LocalPersonality
+import com.patchouli.app.ui.kit.gridPaper
 import com.patchouli.app.ui.screens.fmtTime
 
 /** The TVs found on the network as they answer; tapping one sends the file at [path] to it. */
@@ -89,14 +96,16 @@ fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: (positionMs: Long) 
 	val s = state ?: return
 	// while the thumb is held the bar shows the finger, not the TV
 	var dragging by remember { mutableStateOf<Float?>(null) }
-	Box(modifier.fillMaxSize().background(colors.background), contentAlignment = Alignment.Center) {
-		Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
+	// a page of the comic over the video: the tone behind, one panel with the remote in it
+	Box(modifier.fillMaxSize().background(colors.background).gridPaper(colors.onBackground, colors.gridOpacity), contentAlignment = Alignment.Center) {
+		KitSurface(elevation = KitSurfaceElevation.Raised, screentone = KitScreentone.Corner, modifier = Modifier.padding(24.dp).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 22.dp, vertical = 24.dp)) {
+		Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
 			KitText(text = "📺", role = KitTextRole.Title, color = colors.primary)
 			KitText(
 				text = if (s.error != null) stringResource(R.string.cast_failed, s.error) else stringResource(R.string.cast_sending, s.tv),
-				role = KitTextRole.Title, color = if (s.error != null) colors.error else colors.onBackground, uppercase = false, maxLines = 3,
+				role = KitTextRole.Stamp, fontSize = 17.sp, color = if (s.error != null) colors.error else colors.onSurface, uppercase = true, maxLines = 3, textAlign = TextAlign.Center,
 			)
-			KitText(text = s.title, role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false, maxLines = 2)
+			KitText(text = s.title, role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false, maxLines = 2, textAlign = TextAlign.Center)
 			if (s.error == null && !s.busy && s.durationMs > 0) {
 				val shownMs = dragging?.let { (it * s.durationMs).toLong() } ?: s.positionMs
 				Column(Modifier.fillMaxWidth()) {
@@ -141,6 +150,7 @@ fun CastRemote(modifier: Modifier = Modifier, onBackToPhone: (positionMs: Long) 
 					label = stringResource(R.string.cast_back_to_phone), size = KitButtonSize.Sm, variant = KitButtonVariant.Tonal,
 				)
 			}
+		}
 		}
 	}
 }

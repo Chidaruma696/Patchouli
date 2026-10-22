@@ -1,6 +1,6 @@
 /*
  * More of the kit: KitSegmented, KitList (container + row), KitSheet (bottom placement), KitDialog,
- * KitProgress, KitFab and the settings section head.
+ * KitProgress, KitFab and the section head. Same manga look as Kit.kt, after Komi Store.
  */
 package com.patchouli.app.ui.kit
 
@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +44,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
@@ -64,47 +63,48 @@ import androidx.compose.ui.window.DialogProperties
 @Immutable
 data class KitSegmentedItem<T>(val value: T, val title: String? = null, val icon: ImageVector? = null)
 
+/** A strip of paper with the pen around it and a block behind, cut into cells by rules of ink; the chosen cell is the accent. */
 @Composable
 fun <T> KitSegmented(
 	selected: T,
 	items: List<KitSegmentedItem<T>>,
 	onSelect: (T) -> Unit,
 	modifier: Modifier = Modifier,
-	height: Dp = 40.dp,
+	height: Dp = 42.dp,
 	fillWidth: Boolean = false,
 ) {
 	val personality = LocalPersonality.current
 	val colors = personality.colors
-	val outer = RoundedCornerShape(if (personality.shape.pill) height / 2 else personality.shape.cornerSmall)
+	val shape = remember(personality.shape.cornerSmall) { kitShape(personality.shape.cornerSmall) }
+	val line = personality.shape.borderButton
 	Row(
 		modifier = modifier
 			.height(height)
-			.clip(outer)
-			.background(colors.surfaceVariant)
-			.padding(3.dp),
+			.hardShadow(offset = DpOffset(3.dp, 3.dp), color = colors.shadow, shape = shape)
+			.background(colors.surface, shape)
+			.border(line, colors.outline, shape)
+			.clip(shape),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
-		items.forEach { item ->
+		items.forEachIndexed { index, item ->
+			if (index > 0) Box(Modifier.width(line).fillMaxHeight().background(colors.outline))
 			val active = selected == item.value
 			val interaction = remember { MutableInteractionSource() }
 			val focused by interaction.collectIsFocusedAsState()
-			val inner = RoundedCornerShape(if (personality.shape.pill) (height - 6.dp) / 2 else personality.shape.cornerSmall - 2.dp)
+			val ink = if (active) colors.onPrimary else colors.onSurface
 			Box(
 				modifier = Modifier
 					.fillMaxHeight()
 					.then(if (fillWidth) Modifier.weight(1f) else Modifier.defaultMinSize(minWidth = height))
 					.inkFocusRing(focused = { focused }, color = colors.primary)
-					.then(if (active) Modifier.softShadow(personality.shadow.card, inner, colors.shadow) else Modifier)
-					.clip(inner)
-					.background(if (active) colors.surface else Color.Transparent)
+					.background(if (active) colors.primary else Color.Transparent)
 					.clickable(interactionSource = interaction, indication = null) { onSelect(item.value) }
 					.padding(horizontal = Spacing.md),
 				contentAlignment = Alignment.Center,
 			) {
-				val ink = if (active) colors.primary else colors.onSurfaceVariant
 				Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
 					item.icon?.let { Icon(it, contentDescription = item.title, modifier = Modifier.size(18.dp), tint = ink) }
-					item.title?.let { KitText(it, role = KitTextRole.Label, color = ink, fontSize = 13.sp, maxLines = 1, uppercase = false) }
+					item.title?.let { KitText(it, role = KitTextRole.Stamp, color = ink, maxLines = 1) }
 				}
 			}
 		}
@@ -113,6 +113,7 @@ fun <T> KitSegmented(
 
 // ---------------------------------------------------------------- lists
 
+/** A list is one panel: the pen's line around it and a 4 dp block behind. */
 @Composable
 fun KitListContainer(
 	modifier: Modifier = Modifier,
@@ -120,18 +121,17 @@ fun KitListContainer(
 ) {
 	val personality = LocalPersonality.current
 	val colors = personality.colors
-	val shape = kitShape(personality.shape.corner)
 	Column(
 		modifier = modifier
 			.fillMaxWidth()
-			.softShadow(personality.shadow.card, shape, colors.shadow)
-			.clip(shape)
-			.background(colors.surface)
-			.border(width = personality.shape.border, color = colors.outline, shape = shape),
+			.hardShadow(offset = DpOffset(4.dp, 4.dp), color = colors.shadow, shape = RectangleShape)
+			.background(color = colors.surface)
+			.border(width = personality.shape.border, color = colors.outline),
 		content = content,
 	)
 }
 
+/** One row of the panel: a 2 dp rule under it, a bar of the accent at its start when selected, the icon in its own little box. */
 @Composable
 fun KitListRow(
 	title: String,
@@ -155,41 +155,33 @@ fun KitListRow(
 	val clickModifier = if (onClick == null && onLongClick == null) {
 		Modifier
 	} else {
-		Modifier.combinedClickable(
-			interactionSource = interaction,
-			indication = null,
-			enabled = enabled,
-			onLongClick = onLongClick,
-			onClick = onClick ?: {},
-		)
+		Modifier.combinedClickable(interactionSource = interaction, indication = null, enabled = enabled, onLongClick = onLongClick, onClick = onClick ?: {})
 	}
 	Row(
 		modifier = modifier
 			.fillMaxWidth()
 			.inkFocusRing(focused = { focused }, color = colors.primary)
-			.then(if (selected) Modifier.background(colors.primary.copy(alpha = 0.08f)) else Modifier)
+			.then(if (selected) Modifier.background(colors.surfaceVariant) else Modifier)
 			.then(
 				if (showDivider) Modifier.drawBehind {
-					val stroke = 1.dp.toPx()
+					val stroke = 2.dp.toPx()
 					val y = size.height - stroke / 2f
-					drawLine(color = colors.outline, start = Offset(16.dp.toPx(), y), end = Offset(size.width - 16.dp.toPx(), y), strokeWidth = stroke)
+					drawLine(color = colors.outline, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = stroke)
 				} else Modifier,
 			)
+			.then(if (selected) Modifier.drawBehind { drawRect(color = colors.primary, size = Size(5.dp.toPx(), size.height)) } else Modifier)
 			.then(clickModifier)
-			.padding(horizontal = 16.dp, vertical = 12.dp)
+			.padding(horizontal = 14.dp, vertical = 12.dp)
 			.alpha(if (enabled) 1f else 0.45f),
 		verticalAlignment = Alignment.CenterVertically,
 		horizontalArrangement = Arrangement.spacedBy(14.dp),
 	) {
 		if (icon != null) {
 			Box(
-				modifier = Modifier
-					.size(40.dp)
-					.clip(RoundedCornerShape(if (personality.shape.pill) 20.dp else personality.shape.cornerSmall))
-					.background(if (destructive) colors.error.copy(alpha = 0.12f) else colors.primary.copy(alpha = 0.12f)),
+				modifier = Modifier.size(42.dp).background(color = colors.background).border(width = personality.shape.borderChip, color = colors.outline),
 				contentAlignment = Alignment.Center,
 			) {
-				Icon(icon, contentDescription = null, tint = if (destructive) colors.error else colors.primary, modifier = Modifier.size(21.dp))
+				Icon(icon, contentDescription = null, tint = if (destructive) colors.error else colors.onSurface, modifier = Modifier.size(22.dp))
 			}
 		}
 		Column(modifier = Modifier.weight(1f)) {
@@ -197,21 +189,21 @@ fun KitListRow(
 				text = title,
 				role = KitTextRole.Label,
 				color = titleColor,
-				fontSize = 15.sp,
-				fontWeight = if (strong) FontWeight.Black else null,
-				uppercase = false,
+				fontSize = 16.sp,
+				lineHeight = 24.sp,
+				fontWeight = if (strong) FontWeight.Bold else FontWeight.Medium,
 				maxLines = 1,
 				overflow = TextOverflow.Ellipsis,
 			)
 			subtitle?.let {
-				KitText(text = it, role = KitTextRole.Body, color = colors.onSurfaceVariant, uppercase = false, maxLines = 2, overflow = TextOverflow.Ellipsis)
+				KitText(text = it, role = KitTextRole.Body, color = colors.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
 			}
 		}
 		trailing?.invoke()
 	}
 }
 
-/** Section head with the check mark, the Japanese kicker and a hairline to the edge. */
+/** Section head as lettering: the stamp, the title in Anton capitals, the Japanese kicker, and a rule of ink to the edge. */
 @Composable
 fun KitSectionHead(
 	label: String,
@@ -221,22 +213,23 @@ fun KitSectionHead(
 ) {
 	val colors = LocalPersonality.current.colors
 	Row(
-		modifier = modifier.fillMaxWidth().padding(top = 16.dp, bottom = 10.dp),
+		modifier = modifier.fillMaxWidth().padding(top = 18.dp, bottom = 10.dp),
 		verticalAlignment = Alignment.CenterVertically,
 		horizontalArrangement = Arrangement.spacedBy(10.dp),
 	) {
 		HeadlineMark(12.dp)
-		KitText(text = label, role = KitTextRole.Stamp, color = colors.onSurface, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+		KitText(text = label, role = KitTextRole.Title, color = colors.onSurface, fontSize = 20.sp, lineHeight = 24.sp, letterSpacing = 0.02.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
 		if (kicker != null) {
-			KitText(text = kicker, role = KitTextRole.Label, color = colors.onSurfaceVariant, fontSize = 11.sp, uppercase = false, maxLines = 1)
+			KitText(text = kicker, role = KitTextRole.Overline, color = colors.onSurfaceVariant, uppercase = false, maxLines = 1)
 		}
-		Box(Modifier.weight(1f).height(1.dp).background(colors.outline))
+		Box(Modifier.weight(1f).height(2.dp).background(colors.outline))
 		action?.invoke()
 	}
 }
 
 // ---------------------------------------------------------------- overlays
 
+/** A sheet rising from the bottom edge: square, a 4 dp rule of ink along its top, the grabber in ink, the tone in the corner. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KitSheet(
@@ -255,42 +248,46 @@ fun KitSheet(
 		onDismissRequest = onDismiss,
 		modifier = modifier,
 		sheetState = sheetState,
-		shape = RoundedCornerShape(topStart = personality.shape.corner + 6.dp, topEnd = personality.shape.corner + 6.dp),
+		shape = RectangleShape,
 		containerColor = colors.background,
 		contentColor = colors.onSurface,
-		scrimColor = colors.shadow.copy(alpha = 0.45f),
+		scrimColor = colors.shadow.copy(alpha = 0.55f),
 		dragHandle = null,
 	) {
-		Column(
-			modifier = Modifier
-				.fillMaxWidth()
-				.then(if (screentone) Modifier.screentoneCorner(colors.primary, colors.screentoneOpacity, boost = 1.5f, regionWidth = 150.dp, regionHeight = 110.dp) else Modifier)
-				.padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 22.dp),
-		) {
-			Box(Modifier.fillMaxWidth().padding(bottom = if (title != null) 12.dp else 8.dp), contentAlignment = Alignment.Center) {
-				Box(Modifier.size(width = 40.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(colors.onSurfaceVariant.copy(alpha = 0.4f)))
-			}
-			if (title != null) {
-				Row(
-					modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
-					verticalAlignment = Alignment.CenterVertically,
-					horizontalArrangement = Arrangement.spacedBy(10.dp),
-				) {
-					HeadlineMark(12.dp)
-					KitText(text = title, role = KitTextRole.Title, fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-					if (titleJp != null) {
-						KitText(text = titleJp, role = KitTextRole.Label, color = colors.onSurfaceVariant, fontSize = 11.sp, uppercase = false, maxLines = 1)
+		Column(Modifier.fillMaxWidth()) {
+			Box(Modifier.fillMaxWidth().height(4.dp).background(colors.outline))
+			Column(
+				modifier = Modifier
+					.fillMaxWidth()
+					.then(if (screentone) Modifier.screentoneCorner(colors.onSurface, colors.screentoneOpacity, boost = 1.6f, regionWidth = 150.dp, regionHeight = 110.dp) else Modifier)
+					.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 22.dp),
+			) {
+				Box(Modifier.fillMaxWidth().padding(bottom = if (title != null) 12.dp else 8.dp), contentAlignment = Alignment.Center) {
+					Box(Modifier.size(width = 46.dp, height = 5.dp).background(colors.outline))
+				}
+				if (title != null) {
+					Row(
+						modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+						verticalAlignment = Alignment.CenterVertically,
+						horizontalArrangement = Arrangement.spacedBy(10.dp),
+					) {
+						HeadlineMark(10.dp)
+						KitText(text = title, role = KitTextRole.Label, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+						if (titleJp != null) {
+							KitText(text = titleJp, role = KitTextRole.Body, color = colors.onSurfaceVariant, fontSize = 12.sp, maxLines = 1)
+						}
 					}
 				}
-			}
-			Column(modifier = Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()), content = content)
-			if (footer != null) {
-				Box(Modifier.fillMaxWidth().padding(top = 16.dp)) { footer() }
+				Column(modifier = Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()), content = content)
+				if (footer != null) {
+					Box(Modifier.fillMaxWidth().padding(top = 16.dp)) { footer() }
+				}
 			}
 		}
 	}
 }
 
+/** A dialog is a modal panel: the page's paper, a 4 dp line and a 14 dp block behind. */
 @Composable
 fun KitDialog(
 	onDismissRequest: () -> Unit,
@@ -305,6 +302,7 @@ fun KitDialog(
 		KitSurface(
 			modifier = modifier.fillMaxWidth(),
 			elevation = KitSurfaceElevation.Modal,
+			paper = KitSurfacePaper.Background,
 			contentPadding = PaddingValues(22.dp),
 		) {
 			Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -321,30 +319,32 @@ fun KitDialog(
 
 // ---------------------------------------------------------------- progress
 
+/** The ink spinner: a 4 dp stroke cut square. */
 @Composable
 fun KitCircularProgress(modifier: Modifier = Modifier, color: Color = Color.Unspecified) {
 	val colors = LocalPersonality.current.colors
 	CircularProgressIndicator(
 		modifier = modifier,
 		color = if (color != Color.Unspecified) color else colors.primary,
-		strokeWidth = 3.5.dp,
-		strokeCap = StrokeCap.Round,
-		trackColor = colors.primary.copy(alpha = 0.14f),
+		strokeWidth = 4.dp,
+		strokeCap = StrokeCap.Butt,
 	)
 }
 
+/** A bar cut square: the accent over the well of the paper. */
 @Composable
 fun KitLinearProgress(modifier: Modifier = Modifier, progress: (() -> Float)? = null) {
 	val colors = LocalPersonality.current.colors
 	if (progress == null) {
-		LinearProgressIndicator(modifier = modifier.clip(RoundedCornerShape(2.dp)), color = colors.primary, trackColor = colors.primary.copy(alpha = 0.14f), strokeCap = StrokeCap.Round)
+		LinearProgressIndicator(modifier = modifier.clip(RectangleShape), color = colors.primary, trackColor = colors.surfaceVariant, strokeCap = StrokeCap.Butt, gapSize = 0.dp)
 	} else {
-		LinearProgressIndicator(progress = progress, modifier = modifier.clip(RoundedCornerShape(2.dp)), color = colors.primary, trackColor = colors.primary.copy(alpha = 0.14f), strokeCap = StrokeCap.Round)
+		LinearProgressIndicator(progress = progress, modifier = modifier.clip(RectangleShape), color = colors.primary, trackColor = colors.surfaceVariant, strokeCap = StrokeCap.Butt, gapSize = 0.dp, drawStopIndicator = {})
 	}
 }
 
 // ---------------------------------------------------------------- fab
 
+/** The big stamp of the page: the accent, a 3 dp line and a 5 dp block that vanishes while pressed. */
 @Composable
 fun KitFab(
 	onClick: () -> Unit,
@@ -355,16 +355,16 @@ fun KitFab(
 ) {
 	val personality = LocalPersonality.current
 	val colors = personality.colors
+	val shape = remember(personality.shape.cornerSmall) { kitShape(personality.shape.cornerSmall) }
 	val interaction = remember { MutableInteractionSource() }
 	val pressed by interaction.collectIsPressedAsState()
 	val focused by interaction.collectIsFocusedAsState()
 	val press = animateFloatAsState(if (pressed) 1f else 0f, label = "kitFabPress")
-	val shape = RoundedCornerShape(if (personality.shape.pill) 28.dp else personality.shape.corner)
 	val base = modifier
-		.softPress { press.value }
-		.softShadow(personality.shadow.raised, shape, colors.shadow)
+		.hardShadow(color = colors.shadow, shape = shape) { Offset(5.dp.toPx() * (1f - press.value), 5.dp.toPx() * (1f - press.value)) }
 		.clip(shape)
-		.background(colors.primary)
+		.background(colors.primary, shape)
+		.border(3.dp, colors.outline, shape)
 		.inkFocusRing(focused = { focused }, color = colors.primary)
 		.clickable(interactionSource = interaction, indication = null, onClick = onClick)
 	if (label != null) {
@@ -374,7 +374,7 @@ fun KitFab(
 			horizontalArrangement = Arrangement.spacedBy(10.dp),
 		) {
 			Icon(icon, contentDescription, modifier = Modifier.size(22.dp), tint = colors.onPrimary)
-			KitText(label, role = KitTextRole.Label, color = colors.onPrimary, fontSize = 15.sp, uppercase = false)
+			KitText(label, role = KitTextRole.Label, color = colors.onPrimary, fontSize = 16.sp)
 		}
 	} else {
 		Box(modifier = base.size(56.dp), contentAlignment = Alignment.Center) {

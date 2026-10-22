@@ -19,13 +19,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,44 +48,49 @@ data class PersonalityColors(
 	val onSurface: Color,
 	val surfaceVariant: Color,
 	val onSurfaceVariant: Color,
-	/** Hairlines and borders: the ink at low strength, never the full ink of the old stamps. */
+	/** The pen's line around every panel: the ink itself. */
 	val outline: Color,
 	val outlineVariant: Color,
+	/** Rules inside a panel: the ink, lighter. */
+	val divider: Color,
 	val error: Color,
 	val onError: Color,
+	/** The hard block behind each panel, offset like a badly registered print. */
 	val shadow: Color,
-	/** Strength of the check motif where it shows (corners, empty areas). */
+	/** Strength of the tone sheets (corners, fills) and of the grid paper behind the page. */
 	val screentoneOpacity: Float,
 	val gridOpacity: Float,
 ) {
 	val isDark: Boolean get() = background.luminance() < 0.5f
 }
 
+/** [border] is the panel's line, [borderButton] and [borderChip] the thinner lines of the small things. */
 @Immutable
-data class PersonalityShape(val border: Dp, val corner: Dp, val cornerSmall: Dp, val pill: Boolean)
+data class PersonalityShape(val border: Dp, val borderButton: Dp, val borderChip: Dp, val corner: Dp, val cornerSmall: Dp, val pill: Boolean)
 
 @Immutable
 data class PersonalityType(
 	val display: TextStyle,
 	val title: TextStyle,
 	val stamp: TextStyle,
+	val overline: TextStyle,
 	val body: TextStyle,
 	val label: TextStyle,
 	val mono: TextStyle,
 	val uppercaseHeadings: Boolean,
 )
 
-/** Soft elevations (blurred shadows), not the offset ink of the manga look. */
+/** How far the ink block sits behind each kind of panel: the offset of the hard shadow, no blur. */
 @Immutable
 data class PersonalityShadow(val card: Dp, val raised: Dp, val modal: Dp, val button: Dp)
 
 @Immutable
 data class StatusColors(val ready: Color, val warning: Color, val error: Color)
 
-enum class HeadlineMarker { None, Checker }
+enum class HeadlineMarker { None, Stamp }
 
 /** Background pattern of the app. */
-enum class Motif { None, Checker }
+enum class Motif { None, Grid }
 
 /** Everything that makes one app look like itself; the other app changes only this. */
 @Immutable
@@ -179,12 +182,14 @@ fun Palette.toColors(dark: Boolean): PersonalityColors = PersonalityColors(
 	background = Color(page), onBackground = Color(ink),
 	surface = Color(panel), onSurface = Color(ink),
 	surfaceVariant = Color(well), onSurfaceVariant = Color(muted),
-	outline = lerp(Color(panel), Color(ink), if (dark) 0.22f else 0.14f),
+	outline = Color(ink),
 	outlineVariant = Color(muted),
+	divider = Color(ink).copy(alpha = 0.4f),
 	error = Color(error), onError = Color(onError),
+	// day: the block is ink; night: it is black, a step darker than the page
 	shadow = if (dark) Color(0xFF000000) else Color(ink),
-	screentoneOpacity = if (dark) 0.10f else 0.07f,
-	gridOpacity = if (dark) 0.05f else 0.035f,
+	screentoneOpacity = if (dark) 0.20f else 0.16f,
+	gridOpacity = if (dark) 0.06f else 0.05f,
 )
 
 // ---------------------------------------------------------------- type and this app's style
@@ -202,32 +207,32 @@ val JetBrainsMonoFamily = FontFamily(
 	Font(R.font.jetbrainsmono_bold, FontWeight.Bold),
 )
 
-/**
- * Patchouli: the librarian of the mansion. A serif (Lora) for headings like the spine of a book,
- * modest corners, flat shadows and no pattern behind the page; the only ornament is the mark.
- */
-@OptIn(ExperimentalTextApi::class)
-val LoraFamily = FontFamily(
-	Font(R.font.lora, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
-	Font(R.font.lora, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
-	Font(R.font.lora, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
-	Font(R.font.lora, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
-)
+/** Anton ships one weight; without this a bold request smears it. */
+private val SingleWeight = FontSynthesis.None
 
+/** The lettering of the headlines: Anton, in capitals, as on a manga cover. */
+val AntonFamily = FontFamily(Font(R.font.anton, FontWeight.Normal))
+
+/**
+ * Patchouli drawn as a manga, the way Komi Store draws its pages: Anton in capitals for the
+ * headlines and stamps, Noto Sans for the reading, JetBrains Mono for the numbers; square panels
+ * with a 3 dp line of ink and a hard shadow behind; tone sheets in the corners, grid paper under all.
+ */
 val EstiloApp = KitStyle(
 	type = PersonalityType(
-		display = TextStyle(fontFamily = LoraFamily, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 33.sp, letterSpacing = (-0.01).em),
-		title = TextStyle(fontFamily = LoraFamily, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, lineHeight = 26.sp),
-		stamp = TextStyle(fontFamily = LoraFamily, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 18.sp),
-		body = TextStyle(fontFamily = NotoSansFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 21.sp),
-		label = TextStyle(fontFamily = NotoSansFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 16.sp),
-		mono = TextStyle(fontFamily = JetBrainsMonoFamily, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
-		uppercaseHeadings = false,
+		display = TextStyle(fontFamily = AntonFamily, fontWeight = FontWeight.Normal, fontSize = 32.sp, lineHeight = 36.sp, letterSpacing = 0.01.em, fontSynthesis = SingleWeight),
+		title = TextStyle(fontFamily = AntonFamily, fontWeight = FontWeight.Normal, fontSize = 24.sp, lineHeight = 28.sp, letterSpacing = 0.01.em, fontSynthesis = SingleWeight),
+		stamp = TextStyle(fontFamily = AntonFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 16.sp, letterSpacing = 0.06.em, fontSynthesis = SingleWeight),
+		overline = TextStyle(fontFamily = NotoSansFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.08.em),
+		body = TextStyle(fontFamily = NotoSansFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+		label = TextStyle(fontFamily = NotoSansFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.01.em),
+		mono = TextStyle(fontFamily = JetBrainsMonoFamily, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, fontSynthesis = SingleWeight),
+		uppercaseHeadings = true,
 	),
-	shape = PersonalityShape(border = 1.dp, corner = 10.dp, cornerSmall = 8.dp, pill = false),
-	shadow = PersonalityShadow(card = 1.dp, raised = 4.dp, modal = 12.dp, button = 0.dp),
-	marker = HeadlineMarker.Checker,
-	motif = Motif.None,
+	shape = PersonalityShape(border = 3.dp, borderButton = 2.5.dp, borderChip = 2.dp, corner = 0.dp, cornerSmall = 0.dp, pill = false),
+	shadow = PersonalityShadow(card = 6.dp, raised = 10.dp, modal = 14.dp, button = 4.dp),
+	marker = HeadlineMarker.Stamp,
+	motif = Motif.Grid,
 )
 
 @Immutable

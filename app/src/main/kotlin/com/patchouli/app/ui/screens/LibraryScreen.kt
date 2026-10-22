@@ -274,6 +274,8 @@ fun FolderCard(folder: Folder, onClick: () -> Unit, onLongClick: (() -> Unit)? =
 	KitSurface(onClick = onClick, onLongClick = onLongClick, elevation = KitSurfaceElevation.Card) {
 		Column {
 			FolderCover(folder, modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f), note = !compact)
+			// the pen separates the picture from its caption, as in a panel
+			Box(Modifier.fillMaxWidth().height(2.dp).background(colors.outline))
 			Column(Modifier.padding(horizontal = if (compact) 8.dp else 12.dp, vertical = if (compact) 7.dp else 10.dp)) {
 				// the folder's own name, always: the catalogue's title lives inside the folder, not on its spine
 				KitText(Names.series(folder.name), role = KitTextRole.Stamp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = if (compact) 11.sp else 14.sp)

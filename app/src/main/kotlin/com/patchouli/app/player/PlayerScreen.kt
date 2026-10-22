@@ -4,7 +4,9 @@ import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +59,14 @@ import com.patchouli.app.cast.CastSheet
 import com.patchouli.app.ui.AppPrefs
 import com.patchouli.app.ui.kit.KitButton
 import com.patchouli.app.ui.kit.KitButtonSize
+import com.patchouli.app.ui.kit.KitButtonVariant
 import com.patchouli.app.ui.kit.KitCircularProgress
+import com.patchouli.app.ui.kit.KitScreentone
+import com.patchouli.app.ui.kit.KitSurface
+import com.patchouli.app.ui.kit.KitSurfaceElevation
+import com.patchouli.app.ui.kit.LocalPersonality
+import com.patchouli.app.ui.kit.hardShadow
+import androidx.compose.ui.unit.DpOffset
 import com.patchouli.app.ui.kit.KitLinearProgress
 import com.patchouli.app.ui.kit.KitListContainer
 import com.patchouli.app.ui.kit.KitListRow
@@ -266,12 +275,15 @@ fun PlayerScreen(activity: PlayerActivity) {
 			Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { KitCircularProgress(color = Color.White) }
 		}
 		if (error) {
+			// the bad news comes in a panel of the comic, not in white on black
 			Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-				Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-					KitText(stringResource(R.string.err_cannot_play), role = KitTextRole.Body, color = Color.White, uppercase = false, textAlign = TextAlign.Center)
-					Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-						KitButton(onClick = { error = false; player.stop(); player.play() }, label = stringResource(R.string.retry), size = KitButtonSize.Sm)
-						KitButton(onClick = { activity.toggleDecoder() }, label = stringResource(if (activity.hardware) R.string.decoder_sw else R.string.decoder_hw), size = KitButtonSize.Sm)
+				KitSurface(elevation = KitSurfaceElevation.Raised, screentone = KitScreentone.Corner, contentPadding = PaddingValues(20.dp)) {
+					Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+						KitText(stringResource(R.string.err_cannot_play), role = KitTextRole.Body, uppercase = false, textAlign = TextAlign.Center)
+						Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+							KitButton(onClick = { error = false; player.stop(); player.play() }, label = stringResource(R.string.retry), size = KitButtonSize.Sm)
+							KitButton(onClick = { activity.toggleDecoder() }, label = stringResource(if (activity.hardware) R.string.decoder_sw else R.string.decoder_hw), size = KitButtonSize.Sm, variant = KitButtonVariant.Outline)
+						}
 					}
 				}
 			}
@@ -370,18 +382,25 @@ fun PlayerScreen(activity: PlayerActivity) {
 	}
 }
 
+/** What a gesture says, as a caption box of the comic: paper, the pen around it, a hard ink shadow behind, over the video. */
 @Composable
 private fun HudView(hud: Hud) {
+	val personality = LocalPersonality.current
+	val colors = personality.colors
 	Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 		Column(
-			modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 22.dp, vertical = 14.dp),
+			modifier = Modifier
+				.hardShadow(DpOffset(personality.shadow.card, personality.shadow.card), colors.shadow)
+				.background(colors.surface)
+				.border(personality.shape.border, colors.outline)
+				.padding(horizontal = 22.dp, vertical = 14.dp),
 			horizontalAlignment = Alignment.CenterHorizontally,
 			verticalArrangement = Arrangement.spacedBy(8.dp),
 		) {
-			hud.icon?.let { Icon(ImageVector.vectorResource(it), contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp)) }
-			KitText(hud.text, role = KitTextRole.Mono, color = Color.White, fontSize = 16.sp)
+			hud.icon?.let { Icon(ImageVector.vectorResource(it), contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(30.dp)) }
+			KitText(hud.text, role = KitTextRole.Stamp, color = colors.onSurface, fontSize = 18.sp)
 			hud.fraction?.let { f ->
-				KitLinearProgress(progress = { f }, modifier = Modifier.width(140.dp).height(4.dp))
+				KitLinearProgress(progress = { f }, modifier = Modifier.width(140.dp).height(8.dp).border(2.dp, colors.outline))
 			}
 		}
 	}
